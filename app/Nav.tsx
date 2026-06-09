@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 
@@ -33,7 +34,7 @@ export default function Nav({ username, isAdmin }: Props) {
       <nav className="nav">
         <div className="nav-inner">
           <Link href="/dashboard" className="nav-logo" onClick={close}>
-            <span className="nav-logo-icon">⚽</span>
+            <Image src="/logo.png" alt="" width={28} height={28} className="nav-logo-icon" priority />
             WM 2026
           </Link>
 

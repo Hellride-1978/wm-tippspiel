@@ -7,6 +7,10 @@ import './globals.css'
 export const metadata = {
   title: { default: 'WM 2026 Tippspiel', template: '%s — WM Tippspiel' },
   description: 'WM 2026 Tippspiel — tippe alle Spiele und miss dich mit Freunden.',
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
 }
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
