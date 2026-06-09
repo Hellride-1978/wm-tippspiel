@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   try {
     const apiMatches = await fetchWcMatches()
     const rows = apiMatches.map(m => ({
-      match_id: m.id, home_team: m.homeTeam.name, away_team: m.awayTeam.name,
+      match_id: m.id, home_team: m.homeTeam.name ?? 'TBD', away_team: m.awayTeam.name ?? 'TBD',
       home_team_flag: flagForTla(m.homeTeam.tla), away_team_flag: flagForTla(m.awayTeam.tla),
       utc_date: m.utcDate, status: m.status, home_score: m.score.fullTime.home ?? null,
       away_score: m.score.fullTime.away ?? null, matchday: m.matchday ?? null,

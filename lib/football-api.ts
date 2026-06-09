@@ -6,8 +6,8 @@ export interface ApiMatch {
   status: string
   matchday: number | null
   stage: string
-  homeTeam: { name: string; tla: string | null }
-  awayTeam: { name: string; tla: string | null }
+  homeTeam: { name: string | null; tla: string | null }
+  awayTeam: { name: string | null; tla: string | null }
   score: { fullTime: { home: number | null; away: number | null } }
 }
 
