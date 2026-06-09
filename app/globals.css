@@ -389,7 +389,7 @@ input, textarea { font-family: inherit; }
   margin-bottom: 14px;
 }
 .section-title { font-size: 18px; font-weight: 700; color: var(--ink); }
-.section-more { font-size: 13px; font-weight: 500; color: var(--green); }
+.section-more { font-size: 13px; font-weight: 500; color: var(--green); flex-shrink: 0; }
 .section-more:hover { text-decoration: underline; }
 .section-more:focus-visible {
   outline: 2px solid var(--green);
@@ -478,7 +478,15 @@ input, textarea { font-family: inherit; }
   align-items: center;
   gap: 12px;
 }
-.match-team { font-size: 14px; font-weight: 600; color: var(--ink); }
+.match-team {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .match-team-away { text-align: right; }
 .match-vs {
   font-family: var(--mono);
@@ -834,4 +842,7 @@ input, textarea { font-family: inherit; }
   .score-btn { width: 40px; }
   .score-input { width: 52px; font-size: 24px; }
   .nav-logo-icon { display: none; }
+  .match-link { padding: 12px; }
+  .match-team { font-size: 13px; }
+  .page { padding-top: 24px; }
 }
