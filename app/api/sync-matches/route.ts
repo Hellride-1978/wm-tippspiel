@@ -39,6 +39,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, synced: rows.length, finished: finished.length, scored })
   } catch (err) {
     console.error('[sync-matches]', err)
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Sync fehlgeschlagen.' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : JSON.stringify(err)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
