@@ -81,7 +81,7 @@ export async function getUpcomingMatches(limit = 10): Promise<WmMatch[]> {
   const { data } = await getClient()
     .from('wm_matches_cache')
     .select('*')
-    .eq('status', 'SCHEDULED')
+    .in('status', ['SCHEDULED', 'TIMED'])
     .gt('utc_date', new Date().toISOString())
     .order('utc_date', { ascending: true })
     .limit(limit)
