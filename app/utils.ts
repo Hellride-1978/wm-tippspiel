@@ -14,6 +14,13 @@ export function stageLabel(stage: string | null): string {
   return stage ? (map[stage] ?? stage) : 'Unbekannte Phase'
 }
 
+export function groupLabel(group: string | null): string {
+  if (!group) return 'Unbekannte Gruppe'
+  // "GROUP_A" → "Gruppe A", "Group A" → "Gruppe A"
+  const match = group.match(/([A-L])$/)
+  return match ? `Gruppe ${match[1]}` : group
+}
+
 export function tendencyLabel(pts: number): string {
   if (pts === 3) return 'Exakter Treffer'
   if (pts === 1) return 'Tendenz richtig'

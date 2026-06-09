@@ -41,6 +41,7 @@ export interface WmMatch {
   away_score: number | null
   matchday: number | null
   stage: string | null
+  group_name: string | null
   last_updated: string
 }
 

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import type { WmMatch, WmTip } from '@/lib/db'
-import { formatDate, stageLabel, tendencyLabel } from '../utils'
+import { formatDate, stageLabel, groupLabel, tendencyLabel } from '../utils'
 
 type Filter = 'all' | 'group' | 'knockout' | 'my'
 
@@ -20,16 +20,20 @@ export default function MatchesClient({ matches, myTips }: { matches: WmMatch[];
     return true
   })
 
-  const grouped = new Map<string, Map<number | null, WmMatch[]>>()
+  // Group by stage, then within GROUP_STAGE by group_name, otherwise by matchday
+  const stageMap = new Map<string, Map<string, WmMatch[]>>()
   for (const m of filtered) {
     const s = m.stage ?? 'OTHER'
-    if (!grouped.has(s)) grouped.set(s, new Map())
-    const dm = grouped.get(s)!
-    const d = m.matchday ?? null
-    if (!dm.has(d)) dm.set(d, [])
-    dm.get(d)!.push(m)
+    if (!stageMap.has(s)) stageMap.set(s, new Map())
+    const innerMap = stageMap.get(s)!
+    const key = s === 'GROUP_STAGE'
+      ? (m.group_name ?? 'UNKNOWN')
+      : String(m.matchday ?? 'null')
+    if (!innerMap.has(key)) innerMap.set(key, [])
+    innerMap.get(key)!.push(m)
   }
-  const sortedStages = Array.from(grouped.keys()).sort((a, b) => {
+
+  const sortedStages = Array.from(stageMap.keys()).sort((a, b) => {
     const ai = stageOrder.indexOf(a), bi = stageOrder.indexOf(b)
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
   })
@@ -40,10 +44,10 @@ export default function MatchesClient({ matches, myTips }: { matches: WmMatch[];
 
   const [collapsedStages, setCollapsedStages] = useState<Set<string>>(new Set(sortedStages))
 
-  const allDayKeys = sortedStages.flatMap(stage =>
-    Array.from(grouped.get(stage)!.keys()).map(day => `${stage}::${day}`)
+  const allInnerKeys = sortedStages.flatMap(stage =>
+    Array.from(stageMap.get(stage)!.keys()).map(key => `${stage}::${key}`)
   )
-  const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set(allDayKeys))
+  const [collapsedInner, setCollapsedInner] = useState<Set<string>>(new Set(allInnerKeys))
 
   function toggleStage(stage: string) {
     setCollapsedStages(prev => {
@@ -53,12 +57,18 @@ export default function MatchesClient({ matches, myTips }: { matches: WmMatch[];
     })
   }
 
-  function toggleDay(key: string) {
-    setCollapsedDays(prev => {
+  function toggleInner(key: string) {
+    setCollapsedInner(prev => {
       const next = new Set(prev)
       next.has(key) ? next.delete(key) : next.add(key)
       return next
     })
+  }
+
+  function innerLabel(stage: string, key: string): string {
+    if (stage === 'GROUP_STAGE') return groupLabel(key)
+    const day = parseInt(key)
+    return isNaN(day) ? '' : `Spieltag ${day}`
   }
 
   return (
@@ -79,13 +89,16 @@ export default function MatchesClient({ matches, myTips }: { matches: WmMatch[];
       )}
 
       {sortedStages.map(stage => {
-        const dayMap = grouped.get(stage)!
-        const sortedDays = Array.from(dayMap.keys()).sort((a, b) => (a ?? 99) - (b ?? 99))
-        const allMatches = Array.from(dayMap.values()).flat()
+        const innerMap = stageMap.get(stage)!
+        const sortedInner = Array.from(innerMap.keys()).sort((a, b) => {
+          // groups: sort A-L alphabetically; matchdays: sort numerically
+          if (stage === 'GROUP_STAGE') return a.localeCompare(b)
+          return (parseInt(a) || 99) - (parseInt(b) || 99)
+        })
+        const allMatches = Array.from(innerMap.values()).flat()
         const tippedCount = allMatches.filter(m => tipMap.has(m.match_id)).length
         const stageCollapsed = collapsedStages.has(stage)
         const allDone = isAllPast(allMatches)
-        const isGroupStage = stage === 'GROUP_STAGE'
 
         return (
           <div key={stage} className="stage-group">
@@ -102,71 +115,73 @@ export default function MatchesClient({ matches, myTips }: { matches: WmMatch[];
               <span className="stage-toggle-meta">{tippedCount}/{allMatches.length} getippt</span>
             </button>
 
-            {!stageCollapsed && sortedDays.map(day => {
-              const dayKey = `${stage}::${day}`
-              const dayMatches = dayMap.get(day) ?? []
-              const dayCollapsed = collapsedDays.has(dayKey)
-              const dayDone = isAllPast(dayMatches)
-              const dayTipped = dayMatches.filter(m => tipMap.has(m.match_id)).length
+            {!stageCollapsed && sortedInner.map(innerKey => {
+              const fullKey = `${stage}::${innerKey}`
+              const innerMatches = innerMap.get(innerKey) ?? []
+              const innerCollapsed = collapsedInner.has(fullKey)
+              const innerDone = isAllPast(innerMatches)
+              const innerTipped = innerMatches.filter(m => tipMap.has(m.match_id)).length
+              const label = innerLabel(stage, innerKey)
 
               return (
-                <div key={day ?? 'null'} className="matchday-group">
-                  {/* Spieltag-Header — nur bei Gruppenphase einklappbar */}
-                  {day !== null && isGroupStage ? (
+                <div key={innerKey} className="matchday-group">
+                  {label && (
                     <button
                       className="matchday-toggle"
-                      onClick={() => toggleDay(dayKey)}
-                      aria-expanded={!dayCollapsed}
+                      onClick={() => toggleInner(fullKey)}
+                      aria-expanded={!innerCollapsed}
                     >
                       <span className="matchday-toggle-left">
-                        <span className="stage-toggle-arrow" style={{ fontSize: 9 }}>{dayCollapsed ? '▶' : '▼'}</span>
-                        <span className="matchday-toggle-label">Spieltag {day}</span>
-                        {dayDone && <span className="stage-badge stage-badge-done">fertig</span>}
+                        <span className="stage-toggle-arrow" style={{ fontSize: 9 }}>{innerCollapsed ? '▶' : '▼'}</span>
+                        <span className="matchday-toggle-label">{label}</span>
+                        {innerDone && <span className="stage-badge stage-badge-done">fertig</span>}
                       </span>
-                      <span className="stage-toggle-meta">{dayTipped}/{dayMatches.length} getippt</span>
+                      <span className="stage-toggle-meta">{innerTipped}/{innerMatches.length} getippt</span>
                     </button>
-                  ) : (
-                    day !== null && <div className="matchday-label">Spieltag {day}</div>
                   )}
 
-                  {!dayCollapsed && <div className="matches-grid">{dayMatches.map(match => {
-                    const tip = tipMap.get(match.match_id)
-                    const started = new Date(match.utc_date) <= now
-                    const finished = match.status === 'FINISHED'
-                    return (
-                      <div key={match.match_id} className="match-row">
-                        <div className="match-row-main">
-                          <div className="match-date">{formatDate(match.utc_date)}</div>
-                          <div className="match-teams">
-                            <span className="match-team">{match.home_team_flag} {match.home_team}</span>
-                            <span className="match-vs">
-                              {finished && match.home_score !== null
-                                ? <span className="score score-result">{match.home_score} : {match.away_score}</span>
-                                : 'vs'}
-                            </span>
-                            <span className="match-team match-team-away">{match.away_team} {match.away_team_flag}</span>
-                          </div>
-                        </div>
-                        <div className="match-row-side">
-                          {tip ? (
-                            <div className="tip-inline">
-                              <span className="score">Tipp: {tip.home_goals}:{tip.away_goals}</span>
-                              {tip.points_awarded !== null && (
-                                <span className={`pts-badge pts-${tip.points_awarded}`}>
-                                  {tip.points_awarded === 3 ? '🎯' : tip.points_awarded === 1 ? '✓' : '✗'} {tip.points_awarded}P — {tendencyLabel(tip.points_awarded)}
+                  {!innerCollapsed && (
+                    <div className="matches-grid">
+                      {innerMatches.map(match => {
+                        const tip = tipMap.get(match.match_id)
+                        const started = new Date(match.utc_date) <= now
+                        const finished = match.status === 'FINISHED'
+                        return (
+                          <div key={match.match_id} className="match-row">
+                            <div className="match-row-main">
+                              <div className="match-date">{formatDate(match.utc_date)}</div>
+                              <div className="match-teams">
+                                <span className="match-team">{match.home_team_flag} {match.home_team}</span>
+                                <span className="match-vs">
+                                  {finished && match.home_score !== null
+                                    ? <span className="score score-result">{match.home_score} : {match.away_score}</span>
+                                    : 'vs'}
                                 </span>
-                              )}
-                              {!started && <Link href={`/tip/${match.match_id}`} className="edit-link">bearbeiten</Link>}
+                                <span className="match-team match-team-away">{match.away_team} {match.away_team_flag}</span>
+                              </div>
                             </div>
-                          ) : started ? (
-                            <span className="no-tip-label">Nicht getippt</span>
-                          ) : (
-                            <Link href={`/tip/${match.match_id}`} className="btn" style={{ fontSize: 13, padding: '7px 16px' }}>Tippen</Link>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}</div>}
+                            <div className="match-row-side">
+                              {tip ? (
+                                <div className="tip-inline">
+                                  <span className="score">Tipp: {tip.home_goals}:{tip.away_goals}</span>
+                                  {tip.points_awarded !== null && (
+                                    <span className={`pts-badge pts-${tip.points_awarded}`}>
+                                      {tip.points_awarded === 3 ? '🎯' : tip.points_awarded === 1 ? '✓' : '✗'} {tip.points_awarded}P — {tendencyLabel(tip.points_awarded)}
+                                    </span>
+                                  )}
+                                  {!started && <Link href={`/tip/${match.match_id}`} className="edit-link">bearbeiten</Link>}
+                                </div>
+                              ) : started ? (
+                                <span className="no-tip-label">Nicht getippt</span>
+                              ) : (
+                                <Link href={`/tip/${match.match_id}`} className="btn" style={{ fontSize: 13, padding: '7px 16px' }}>Tippen</Link>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )
             })}

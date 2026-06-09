@@ -23,7 +23,7 @@ export async function GET(request: Request) {
       home_team_flag: flagForTla(m.homeTeam.tla), away_team_flag: flagForTla(m.awayTeam.tla),
       utc_date: m.utcDate, status: m.status, home_score: m.score.fullTime.home ?? null,
       away_score: m.score.fullTime.away ?? null, matchday: m.matchday ?? null,
-      stage: m.stage ?? null, last_updated: new Date().toISOString(),
+      stage: m.stage ?? null, group_name: m.group ?? null, last_updated: new Date().toISOString(),
     }))
     await upsertMatches(rows)
 
