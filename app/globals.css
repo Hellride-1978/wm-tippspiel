@@ -13,7 +13,7 @@
   --green:        #15803d; /* was #16a34a — erhöht auf 5.0:1 Kontrast */
   --green-bg:     #f0fdf4;
   --green-border: #86efac;
-  --red:          #dc2626;
+  --red:          #b91c1c; /* was #dc2626 — erhöht auf 5.6:1 auf #fef2f2 */
   --red-bg:       #fef2f2;
   --red-border:   #fca5a5;
   --amber:        #92400e; /* was #d97706 — erhöht auf 7.2:1 Kontrast */
@@ -27,6 +27,19 @@
   --mono:         'DM Mono', ui-monospace, monospace;
   --gutter:       clamp(16px, 4vw, 48px);
   --focus-ring:   0 0 0 3px rgba(15,23,42,0.25);
+}
+
+/* ─── Screen-reader only ─────────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ─── Reset ──────────────────────────────────────────────────── */
@@ -84,8 +97,8 @@ input, textarea { font-family: inherit; }
   font-size: 14px;
   font-weight: 500;
   color: var(--ink-3);
-  padding: 8px 12px;
-  min-height: 36px;
+  padding: 10px 12px;
+  min-height: 44px;
   border-radius: 8px;
   transition: background 0.15s, color 0.15s;
   white-space: nowrap;
@@ -117,8 +130,8 @@ input, textarea { font-family: inherit; }
   background: none;
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 7px 12px;
-  min-height: 36px;
+  padding: 10px 12px;
+  min-height: 44px;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
@@ -135,8 +148,8 @@ input, textarea { font-family: inherit; }
   justify-content: center;
   align-items: center;
   gap: 5px;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   background: none;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -534,8 +547,8 @@ input, textarea { font-family: inherit; }
 .filter-btn {
   font-size: 13px;
   font-weight: 500;
-  padding: 8px 14px;
-  min-height: 36px;
+  padding: 11px 16px;
+  min-height: 44px;
   border-radius: 100px;
   border: 1.5px solid var(--border);
   background: var(--surface);

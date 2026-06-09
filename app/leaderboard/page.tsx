@@ -20,12 +20,12 @@ export default async function LeaderboardPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>#</th>
-              <th>Spieler</th>
-              <th title="Tipps gesamt">Tipps</th>
-              <th title="Exakte Treffer">🎯</th>
-              <th title="Richtige Tendenz">✓</th>
-              <th>Punkte</th>
+              <th scope="col">#</th>
+              <th scope="col">Spieler</th>
+              <th scope="col" title="Tipps gesamt">Tipps</th>
+              <th scope="col" title="Exakte Treffer"><span aria-hidden="true">🎯</span><span className="sr-only">Exakt</span></th>
+              <th scope="col" title="Richtige Tendenz"><span aria-hidden="true">✓</span><span className="sr-only">Tendenz</span></th>
+              <th scope="col">Punkte</th>
             </tr>
           </thead>
           <tbody>

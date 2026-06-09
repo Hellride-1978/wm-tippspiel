@@ -51,18 +51,18 @@ export default function TipForm({ matchId, homeTeam, awayTeam, existingTip }: Pr
         <div className="score-team">
           <span className="score-team-name">{homeTeam}</span>
           <div className="score-control">
-            <button type="button" className="score-btn" onClick={() => setHomeGoals(v => clamp(v - 1))}>−</button>
-            <input type="number" className="score-input" value={homeGoals} min={0} max={20} onChange={e => setHomeGoals(clamp(Number(e.target.value)))} />
-            <button type="button" className="score-btn" onClick={() => setHomeGoals(v => clamp(v + 1))}>+</button>
+            <button type="button" className="score-btn" aria-label={`${homeTeam} Tore verringern`} onClick={() => setHomeGoals(v => clamp(v - 1))}>−</button>
+            <input type="number" className="score-input" aria-label={`${homeTeam} Tore`} value={homeGoals} min={0} max={20} onChange={e => setHomeGoals(clamp(Number(e.target.value)))} />
+            <button type="button" className="score-btn" aria-label={`${homeTeam} Tore erhöhen`} onClick={() => setHomeGoals(v => clamp(v + 1))}>+</button>
           </div>
         </div>
-        <span className="score-colon">:</span>
+        <span className="score-colon" aria-hidden="true">:</span>
         <div className="score-team">
           <span className="score-team-name">{awayTeam}</span>
           <div className="score-control">
-            <button type="button" className="score-btn" onClick={() => setAwayGoals(v => clamp(v - 1))}>−</button>
-            <input type="number" className="score-input" value={awayGoals} min={0} max={20} onChange={e => setAwayGoals(clamp(Number(e.target.value)))} />
-            <button type="button" className="score-btn" onClick={() => setAwayGoals(v => clamp(v + 1))}>+</button>
+            <button type="button" className="score-btn" aria-label={`${awayTeam} Tore verringern`} onClick={() => setAwayGoals(v => clamp(v - 1))}>−</button>
+            <input type="number" className="score-input" aria-label={`${awayTeam} Tore`} value={awayGoals} min={0} max={20} onChange={e => setAwayGoals(clamp(Number(e.target.value)))} />
+            <button type="button" className="score-btn" aria-label={`${awayTeam} Tore erhöhen`} onClick={() => setAwayGoals(v => clamp(v + 1))}>+</button>
           </div>
         </div>
       </div>

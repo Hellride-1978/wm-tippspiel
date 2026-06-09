@@ -50,7 +50,7 @@ export default async function DashboardPage() {
           <div className="table-wrap">
             <table className="table">
               <thead>
-                <tr><th>#</th><th>Spieler</th><th>Tipps</th><th>Punkte</th></tr>
+                <tr><th scope="col">#</th><th scope="col">Spieler</th><th scope="col">Tipps</th><th scope="col">Punkte</th></tr>
               </thead>
               <tbody>
                 {leaderboard.slice(0, 8).map((e, i) => (
