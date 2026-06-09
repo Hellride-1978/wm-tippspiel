@@ -1,0 +1,163 @@
+import { createClient } from '@supabase/supabase-js'
+
+function getClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { global: { fetch: (url, opts: RequestInit = {}) => fetch(url, { ...opts, cache: 'no-store' }) } }
+  )
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface WmUser {
+  id: string
+  email: string
+  username: string
+  password_hash: string
+  is_admin: boolean
+  created_at: string
+}
+
+export interface WmTip {
+  id: string
+  user_id: string
+  match_id: number
+  home_goals: number
+  away_goals: number
+  points_awarded: number | null
+  created_at: string
+}
+
+export interface WmMatch {
+  match_id: number
+  home_team: string
+  away_team: string
+  home_team_flag: string | null
+  away_team_flag: string | null
+  utc_date: string
+  status: string
+  home_score: number | null
+  away_score: number | null
+  matchday: number | null
+  stage: string | null
+  last_updated: string
+}
+
+export interface LeaderboardEntry {
+  user_id: string
+  username: string
+  total_points: number
+  exact_count: number
+  tendency_count: number
+  tip_count: number
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+export async function findUserByEmail(email: string): Promise<WmUser | null> {
+  const { data } = await getClient().from('wm_users').select('*').eq('email', email.toLowerCase()).single()
+  return data ?? null
+}
+
+export async function findUserByUsername(username: string): Promise<WmUser | null> {
+  const { data } = await getClient().from('wm_users').select('*').eq('username', username).single()
+  return data ?? null
+}
+
+export async function createUser(params: { email: string; username: string; password_hash: string }): Promise<WmUser> {
+  const { data, error } = await getClient()
+    .from('wm_users')
+    .insert({ ...params, email: params.email.toLowerCase() })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// ─── Matches ─────────────────────────────────────────────────────────────────
+
+export async function getUpcomingMatches(limit = 10): Promise<WmMatch[]> {
+  const { data } = await getClient()
+    .from('wm_matches_cache')
+    .select('*')
+    .eq('status', 'SCHEDULED')
+    .gt('utc_date', new Date().toISOString())
+    .order('utc_date', { ascending: true })
+    .limit(limit)
+  return data ?? []
+}
+
+export async function getAllMatches(): Promise<WmMatch[]> {
+  const { data } = await getClient().from('wm_matches_cache').select('*').order('utc_date', { ascending: true })
+  return data ?? []
+}
+
+export async function getMatchById(matchId: number): Promise<WmMatch | null> {
+  const { data } = await getClient().from('wm_matches_cache').select('*').eq('match_id', matchId).single()
+  return data ?? null
+}
+
+export async function upsertMatches(matches: Partial<WmMatch>[]) {
+  const { error } = await getClient().from('wm_matches_cache').upsert(matches, { onConflict: 'match_id' })
+  if (error) throw error
+}
+
+// ─── Tips ─────────────────────────────────────────────────────────────────────
+
+export async function getTipByUserAndMatch(userId: string, matchId: number): Promise<WmTip | null> {
+  const { data } = await getClient().from('wm_tips').select('*').eq('user_id', userId).eq('match_id', matchId).single()
+  return data ?? null
+}
+
+export async function getTipsByUser(userId: string): Promise<WmTip[]> {
+  const { data } = await getClient().from('wm_tips').select('*').eq('user_id', userId).order('created_at', { ascending: false })
+  return data ?? []
+}
+
+export async function upsertTip(params: { user_id: string; match_id: number; home_goals: number; away_goals: number }): Promise<WmTip> {
+  const { data, error } = await getClient()
+    .from('wm_tips')
+    .upsert(params, { onConflict: 'user_id,match_id' })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function getUnscoredTipsForMatch(matchId: number): Promise<WmTip[]> {
+  const { data } = await getClient().from('wm_tips').select('*').eq('match_id', matchId).is('points_awarded', null)
+  return data ?? []
+}
+
+export async function awardPoints(tipId: string, points: number) {
+  const { error } = await getClient().from('wm_tips').update({ points_awarded: points }).eq('id', tipId)
+  if (error) throw error
+}
+
+// ─── Leaderboard ──────────────────────────────────────────────────────────────
+
+export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
+  const client = getClient()
+  const [{ data: tips }, { data: users }, { data: allTips }] = await Promise.all([
+    client.from('wm_tips').select('user_id, points_awarded').not('points_awarded', 'is', null),
+    client.from('wm_users').select('id, username'),
+    client.from('wm_tips').select('user_id'),
+  ])
+  if (!users) return []
+
+  const statsMap = new Map<string, { total: number; exact: number; tendency: number; count: number }>()
+  for (const u of users) statsMap.set(u.id, { total: 0, exact: 0, tendency: 0, count: 0 })
+  for (const t of allTips ?? []) { const s = statsMap.get(t.user_id); if (s) s.count++ }
+  for (const t of tips ?? []) {
+    const s = statsMap.get(t.user_id)
+    if (!s) continue
+    const p = t.points_awarded ?? 0
+    s.total += p
+    if (p === 3) s.exact++
+    if (p === 1) s.tendency++
+  }
+  return users
+    .map(u => { const s = statsMap.get(u.id)!; return { user_id: u.id, username: u.username, total_points: s.total, exact_count: s.exact, tendency_count: s.tendency, tip_count: s.count } })
+    .sort((a, b) => b.total_points - a.total_points || b.tip_count - a.tip_count)
+}
