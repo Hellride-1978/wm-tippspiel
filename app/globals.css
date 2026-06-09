@@ -523,6 +523,16 @@ input, textarea { font-family: inherit; }
 
 /* ─── Matches-Seite ──────────────────────────────────────────── */
 .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
+
+.matches-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+@media (max-width: 900px) {
+  .matches-grid { grid-template-columns: 1fr; }
+}
 .filter-btn {
   font-size: 13px;
   font-weight: 500;
@@ -646,7 +656,6 @@ input, textarea { font-family: inherit; }
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 6px;
   box-shadow: var(--shadow-sm);
   flex-wrap: wrap;
 }

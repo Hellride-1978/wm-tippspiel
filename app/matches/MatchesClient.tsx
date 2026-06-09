@@ -144,7 +144,7 @@ export default function MatchesClient({ matches, myTips }: { matches: WmMatch[];
                     day !== null && <div className="matchday-label">Spieltag {day}</div>
                   )}
 
-                  {!dayCollapsed && dayMatches.map(match => {
+                  {!dayCollapsed && <div className="matches-grid">{dayMatches.map(match => {
                     const tip = tipMap.get(match.match_id)
                     const started = new Date(match.utc_date) <= now
                     const finished = match.status === 'FINISHED'
@@ -181,7 +181,7 @@ export default function MatchesClient({ matches, myTips }: { matches: WmMatch[];
                         </div>
                       </div>
                     )
-                  })}
+                  })}</div>}
                 </div>
               )
             })}
