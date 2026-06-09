@@ -34,6 +34,23 @@ export default function MatchesClient({ matches, myTips }: { matches: WmMatch[];
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
   })
 
+  // Stages deren alle Spiele bereits gestartet sind → standardmäßig eingeklappt
+  const defaultCollapsed = new Set(
+    sortedStages.filter(stage => {
+      const allMatches = Array.from(grouped.get(stage)!.values()).flat()
+      return allMatches.every(m => new Date(m.utc_date) <= now)
+    })
+  )
+  const [collapsed, setCollapsed] = useState<Set<string>>(defaultCollapsed)
+
+  function toggleStage(stage: string) {
+    setCollapsed(prev => {
+      const next = new Set(prev)
+      next.has(stage) ? next.delete(stage) : next.add(stage)
+      return next
+    })
+  }
+
   return (
     <div className="page">
       <div className="page-header"><h1 className="page-title">Alle Spiele</h1></div>
@@ -45,15 +62,38 @@ export default function MatchesClient({ matches, myTips }: { matches: WmMatch[];
         ))}
       </div>
 
-      {filtered.length === 0 && <div className="card-sm empty-state">{filter === 'my' ? 'Noch keine Tipps abgegeben.' : 'Keine Spiele gefunden.'}</div>}
+      {filtered.length === 0 && (
+        <div className="card-sm empty-state">
+          {filter === 'my' ? 'Noch keine Tipps abgegeben.' : 'Keine Spiele gefunden.'}
+        </div>
+      )}
 
       {sortedStages.map(stage => {
         const dayMap = grouped.get(stage)!
         const sortedDays = Array.from(dayMap.keys()).sort((a, b) => (a ?? 99) - (b ?? 99))
+        const allMatches = Array.from(dayMap.values()).flat()
+        const tippedCount = allMatches.filter(m => tipMap.has(m.match_id)).length
+        const isCollapsed = collapsed.has(stage)
+        const allDone = allMatches.every(m => new Date(m.utc_date) <= now)
+
         return (
           <div key={stage} className="stage-group">
-            <h2 className="stage-label">{stageLabel(stage)}</h2>
-            {sortedDays.map(day => (
+            <button
+              className="stage-toggle"
+              onClick={() => toggleStage(stage)}
+              aria-expanded={!isCollapsed}
+            >
+              <span className="stage-toggle-left">
+                <span className="stage-toggle-arrow">{isCollapsed ? '▶' : '▼'}</span>
+                <span className="stage-toggle-name">{stageLabel(stage)}</span>
+                {allDone && <span className="stage-badge stage-badge-done">abgeschlossen</span>}
+              </span>
+              <span className="stage-toggle-meta">
+                {tippedCount}/{allMatches.length} getippt
+              </span>
+            </button>
+
+            {!isCollapsed && sortedDays.map(day => (
               <div key={day ?? 'null'} className="matchday-group">
                 {day !== null && <div className="matchday-label">Spieltag {day}</div>}
                 {(dayMap.get(day) ?? []).map(match => {
