@@ -863,7 +863,7 @@ input, textarea { font-family: inherit; }
 @media (max-width: 480px) {
   .score-btn { width: 40px; }
   .score-input { width: 52px; font-size: 24px; }
-  .nav-logo-icon { display: none; }
+  .nav-logo-icon { width: 24px; height: 24px; }
   .match-link { padding: 12px; }
   .match-team { font-size: 13px; }
   .page { padding-top: 24px; }
