@@ -53,8 +53,6 @@ input, textarea { font-family: inherit; }
   box-shadow: var(--shadow-sm);
 }
 .nav-inner {
-  max-width: 1080px;
-  margin: 0 auto;
   padding: 0 var(--gutter);
   height: 56px;
   display: flex;
