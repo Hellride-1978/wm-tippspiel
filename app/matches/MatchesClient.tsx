@@ -38,27 +38,12 @@ export default function MatchesClient({ matches, myTips }: { matches: WmMatch[];
     return ms.every(m => new Date(m.utc_date) <= now)
   }
 
-  // Stages: eingeklappt wenn alle Spiele vorbei
-  const defaultCollapsedStages = new Set(
-    sortedStages.filter(stage =>
-      isAllPast(Array.from(grouped.get(stage)!.values()).flat())
-    )
-  )
-  const [collapsedStages, setCollapsedStages] = useState<Set<string>>(defaultCollapsedStages)
+  const [collapsedStages, setCollapsedStages] = useState<Set<string>>(new Set(sortedStages))
 
-  // Spieltage: eingeklappt wenn alle Spiele vorbei
   const allDayKeys = sortedStages.flatMap(stage =>
     Array.from(grouped.get(stage)!.keys()).map(day => `${stage}::${day}`)
   )
-  const defaultCollapsedDays = new Set(
-    allDayKeys.filter(key => {
-      const [stage, dayStr] = key.split('::')
-      const day = dayStr === 'null' ? null : Number(dayStr)
-      const ms = grouped.get(stage)?.get(day) ?? []
-      return isAllPast(ms)
-    })
-  )
-  const [collapsedDays, setCollapsedDays] = useState<Set<string>>(defaultCollapsedDays)
+  const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set(allDayKeys))
 
   function toggleStage(stage: string) {
     setCollapsedStages(prev => {
