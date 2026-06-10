@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import type { WmMatch, WmTip } from '@/lib/db'
 import { formatDate, stageLabel, groupLabel, tendencyLabel } from '../utils'
@@ -42,12 +42,32 @@ export default function MatchesClient({ matches, myTips }: { matches: WmMatch[];
     return ms.every(m => new Date(m.utc_date) <= now)
   }
 
-  const [collapsedStages, setCollapsedStages] = useState<Set<string>>(new Set(sortedStages))
+  const [collapsedStages, setCollapsedStages] = useState<Set<string>>(() => {
+    try {
+      const saved = sessionStorage.getItem('wm-collapsed-stages')
+      if (saved) return new Set(JSON.parse(saved))
+    } catch {}
+    return new Set(sortedStages)
+  })
 
   const allInnerKeys = sortedStages.flatMap(stage =>
     Array.from(stageMap.get(stage)!.keys()).map(key => `${stage}::${key}`)
   )
-  const [collapsedInner, setCollapsedInner] = useState<Set<string>>(new Set(allInnerKeys))
+  const [collapsedInner, setCollapsedInner] = useState<Set<string>>(() => {
+    try {
+      const saved = sessionStorage.getItem('wm-collapsed-inner')
+      if (saved) return new Set(JSON.parse(saved))
+    } catch {}
+    return new Set(allInnerKeys)
+  })
+
+  useEffect(() => {
+    try { sessionStorage.setItem('wm-collapsed-stages', JSON.stringify([...collapsedStages])) } catch {}
+  }, [collapsedStages])
+
+  useEffect(() => {
+    try { sessionStorage.setItem('wm-collapsed-inner', JSON.stringify([...collapsedInner])) } catch {}
+  }, [collapsedInner])
 
   function toggleStage(stage: string) {
     setCollapsedStages(prev => {
