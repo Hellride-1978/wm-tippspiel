@@ -29,7 +29,7 @@ export default function TipForm({ matchId, homeTeam, awayTeam, existingTip }: Pr
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Fehler.'); return }
       setSuccess(true)
-      setTimeout(() => { router.push('/matches'); router.refresh() }, 1200)
+      setTimeout(() => { router.back(); router.refresh() }, 1200)
     } catch { setError('Netzwerkfehler.') } finally { setLoading(false) }
   }
 
