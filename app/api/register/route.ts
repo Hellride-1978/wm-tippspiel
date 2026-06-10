@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     if (!email || !username || !password) return NextResponse.json({ error: 'Alle Felder sind erforderlich.' }, { status: 400 })
     if (password !== passwordConfirm) return NextResponse.json({ error: 'Passwörter stimmen nicht überein.' }, { status: 400 })
     if (password.length < 6) return NextResponse.json({ error: 'Passwort muss mindestens 6 Zeichen haben.' }, { status: 400 })
-    if (!/^[a-zA-Z0-9_\-\.]+$/.test(username)) return NextResponse.json({ error: 'Benutzername: nur Buchstaben, Zahlen, _, - und . erlaubt.' }, { status: 400 })
+    if (!/^[a-zA-Z0-9_\-\.äöüÄÖÜß]+$/.test(username)) return NextResponse.json({ error: 'Benutzername: nur Buchstaben (inkl. Umlaute), Zahlen, _, - und . erlaubt.' }, { status: 400 })
 
     const [existingEmail, existingUsername] = await Promise.all([findUserByEmail(email), findUserByUsername(username)])
     if (existingEmail) return NextResponse.json({ error: 'Diese E-Mail ist bereits registriert.' }, { status: 409 })
