@@ -23,8 +23,8 @@ export default function Nav({ username, isAdmin }: Props) {
 
   const links = [
     { href: '/dashboard', label: 'Dashboard' },
-    { href: '/matches', label: 'Spiele' },
     { href: '/leaderboard', label: 'Tabelle' },
+    { href: '/matches', label: 'Spiele' },
   ]
 
   function close() { setMenuOpen(false) }

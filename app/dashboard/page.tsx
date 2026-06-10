@@ -72,7 +72,7 @@ export default async function DashboardPage() {
           {/* Jetzt tippen */}
           <section>
             <div className="section-head">
-              <h2 className="section-title">Jetzt tippen</h2>
+              <h2 className="section-title">Spiele</h2>
               <Link href="/matches" className="section-more">Alle Spiele →</Link>
             </div>
             <div className="match-list">
