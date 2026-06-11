@@ -18,13 +18,25 @@ export async function GET(request: Request) {
   }
   try {
     const apiMatches = await fetchWcMatches()
-    const rows = apiMatches.map(m => ({
-      match_id: m.id, home_team: m.homeTeam.name ?? 'TBD', away_team: m.awayTeam.name ?? 'TBD',
-      home_team_flag: flagForTla(m.homeTeam.tla), away_team_flag: flagForTla(m.awayTeam.tla),
-      utc_date: m.utcDate, status: m.status, home_score: m.score.fullTime.home ?? null,
-      away_score: m.score.fullTime.away ?? null, matchday: m.matchday ?? null,
-      stage: m.stage ?? null, group_name: m.group ?? null, last_updated: new Date().toISOString(),
-    }))
+    const rows = apiMatches.map(m => {
+      const homeId = m.homeTeam.id
+      let homeYellow = 0, awayYellow = 0, homeRed = 0, awayRed = 0
+      for (const b of m.bookings ?? []) {
+        const isHome = b.team.id === homeId
+        if (b.card === 'YELLOW') { isHome ? homeYellow++ : awayYellow++ }
+        else if (b.card === 'RED' || b.card === 'YELLOW_RED') { isHome ? homeRed++ : awayRed++ }
+      }
+      return {
+        match_id: m.id, home_team: m.homeTeam.name ?? 'TBD', away_team: m.awayTeam.name ?? 'TBD',
+        home_team_flag: flagForTla(m.homeTeam.tla), away_team_flag: flagForTla(m.awayTeam.tla),
+        utc_date: m.utcDate, status: m.status, home_score: m.score.fullTime.home ?? null,
+        away_score: m.score.fullTime.away ?? null, minute: m.minute ?? null,
+        home_yellow_cards: homeYellow, away_yellow_cards: awayYellow,
+        home_red_cards: homeRed, away_red_cards: awayRed,
+        matchday: m.matchday ?? null, stage: m.stage ?? null,
+        group_name: m.group ?? null, last_updated: new Date().toISOString(),
+      }
+    })
     await upsertMatches(rows)
 
     const finished = rows.filter(r => r.status === 'FINISHED' && r.home_score !== null && r.away_score !== null)

@@ -2,6 +2,7 @@ import { getSession } from '@/lib/auth'
 import { getLeaderboard, getUpcomingMatches, getTipsByUser, getAllMatches } from '@/lib/db'
 import Link from 'next/link'
 import { formatDate, tendencyLabel } from '../utils'
+import { LiveMatchWidget } from './LiveMatchWidget'
 
 export const metadata = { title: 'Dashboard' }
 export const dynamic = 'force-dynamic'
@@ -25,6 +26,8 @@ export default async function DashboardPage() {
         <h1 className="page-title">Dashboard</h1>
         <p className="page-sub">Willkommen zurück, <strong>@{session.username}</strong></p>
       </div>
+
+      <LiveMatchWidget currentUsername={session.username} />
 
       {myEntry && (
         <div className="stat-strip card-sm" style={{ marginBottom: 32 }}>

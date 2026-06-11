@@ -39,6 +39,11 @@ export interface WmMatch {
   status: string
   home_score: number | null
   away_score: number | null
+  minute: number | null
+  home_yellow_cards: number
+  away_yellow_cards: number
+  home_red_cards: number
+  away_red_cards: number
   matchday: number | null
   stage: string | null
   group_name: string | null
@@ -134,6 +139,36 @@ export async function getUnscoredTipsForMatch(matchId: number): Promise<WmTip[]>
 export async function awardPoints(tipId: string, points: number) {
   const { error } = await getClient().from('wm_tips').update({ points_awarded: points }).eq('id', tipId)
   if (error) throw error
+}
+
+export async function getLiveOrNextMatch(): Promise<WmMatch | null> {
+  const client = getClient()
+  const { data: live } = await client
+    .from('wm_matches_cache')
+    .select('*')
+    .in('status', ['IN_PLAY', 'PAUSED'])
+    .order('utc_date', { ascending: true })
+    .limit(1)
+  if (live && live.length > 0) return live[0] as WmMatch
+
+  const { data: next } = await client
+    .from('wm_matches_cache')
+    .select('*')
+    .in('status', ['SCHEDULED', 'TIMED'])
+    .gt('utc_date', new Date().toISOString())
+    .order('utc_date', { ascending: true })
+    .limit(1)
+  return next && next.length > 0 ? (next[0] as WmMatch) : null
+}
+
+export async function getTipsForMatch(matchId: number): Promise<WmTip[]> {
+  const { data } = await getClient().from('wm_tips').select('*').eq('match_id', matchId)
+  return data ?? []
+}
+
+export async function getAllUsernames(): Promise<{ id: string; username: string }[]> {
+  const { data } = await getClient().from('wm_users').select('id, username')
+  return data ?? []
 }
 
 // ─── Leaderboard ──────────────────────────────────────────────────────────────

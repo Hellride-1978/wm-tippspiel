@@ -7,9 +7,11 @@ export interface ApiMatch {
   matchday: number | null
   stage: string
   group: string | null
-  homeTeam: { name: string | null; tla: string | null }
-  awayTeam: { name: string | null; tla: string | null }
+  minute: number | null | undefined
+  homeTeam: { id: number; name: string | null; tla: string | null }
+  awayTeam: { id: number; name: string | null; tla: string | null }
   score: { fullTime: { home: number | null; away: number | null } }
+  bookings?: Array<{ minute: number; team: { id: number }; card: string }>
 }
 
 export async function fetchWcMatches(): Promise<ApiMatch[]> {
