@@ -74,6 +74,8 @@ export function LiveMatchWidget({ currentUsername }: { currentUsername: string }
     try {
       const res = await fetch('/api/live-match')
       if (res.ok) setData(await res.json())
+    } catch {
+      // Netzwerkfehler — nächster Poll-Tick versucht es erneut
     } finally {
       setRefreshing(false)
       setInitialLoad(false)
@@ -82,14 +84,16 @@ export function LiveMatchWidget({ currentUsername }: { currentUsername: string }
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  // Immer alle 60s pollen: bei SCHEDULED damit der Wechsel zu Live nicht
+  // einen Reload erfordert; bei IN_PLAY/PAUSED für Live-Updates.
+  // Nur bei FINISHED stoppen.
   useEffect(() => {
-    if (!data?.match) return
-    const { status } = data.match
-    if (status === 'IN_PLAY' || status === 'PAUSED') {
-      const interval = setInterval(fetchData, 60_000)
-      return () => clearInterval(interval)
-    }
-  }, [data, fetchData])
+    if (initialLoad) return
+    const status = data?.match?.status
+    if (status === 'FINISHED') return
+    const interval = setInterval(fetchData, 60_000)
+    return () => clearInterval(interval)
+  }, [initialLoad, data, fetchData])
 
   if (initialLoad) return <div className="live-skeleton" aria-hidden="true" />
   if (!data?.match) return null
