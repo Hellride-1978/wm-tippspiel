@@ -16,7 +16,8 @@ export async function GET() {
   const match = await getLiveOrNextMatch()
   if (!match) return NextResponse.json({ match: null, tips: [] })
 
-  const isPostKickoff = ['IN_PLAY', 'PAUSED', 'FINISHED'].includes(match.status)
+  const kickedOff = new Date(match.utc_date) <= new Date()
+  const isPostKickoff = ['IN_PLAY', 'PAUSED', 'FINISHED'].includes(match.status) || kickedOff
 
   let tips: { username: string; home_goals: number; away_goals: number; current_points: number }[] = []
 

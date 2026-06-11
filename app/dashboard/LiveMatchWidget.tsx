@@ -32,22 +32,38 @@ interface LiveData {
   tips: TipRow[]
 }
 
+function getHalfInfo(match: MatchData): { half: string; minute: string } {
+  // Wenn die API eine Minute liefert, daraus die Halbzeit ableiten
+  if (match.minute != null) {
+    if (match.minute <= 45) return { half: '1. HZ', minute: `${match.minute}'` }
+    if (match.minute <= 90) return { half: '2. HZ', minute: `${match.minute}'` }
+    return { half: 'Verl.', minute: `${match.minute}'` }
+  }
+  // Sonst aus verstrichener Zeit seit Anpfiff schätzen
+  const elapsed = Math.floor((Date.now() - new Date(match.utc_date).getTime()) / 60000)
+  if (elapsed <= 45) return { half: '1. HZ', minute: `~${elapsed}'` }
+  if (elapsed <= 60) return { half: 'Halbzeit', minute: '' }
+  if (elapsed <= 105) return { half: '2. HZ', minute: `~${Math.min(elapsed - 15, 90)}'` }
+  return { half: 'Nachspielzeit', minute: `~${elapsed - 15}'` }
+}
+
 function StatusBadge({ match }: { match: MatchData }) {
   const kickedOff = new Date(match.utc_date) <= new Date()
 
-  if (match.status === 'IN_PLAY' || (kickedOff && (match.status === 'TIMED' || match.status === 'SCHEDULED'))) {
-    return (
-      <span className="live-badge live-badge--live">
-        <span className="live-dot" />
-        {match.minute != null ? `${match.minute}'` : 'Live'}
-      </span>
-    )
-  }
   if (match.status === 'PAUSED') {
     return <span className="live-badge live-badge--paused">Halbzeit</span>
   }
   if (match.status === 'FINISHED') {
     return <span className="live-badge live-badge--finished">Ende</span>
+  }
+  if (match.status === 'IN_PLAY' || (kickedOff && (match.status === 'TIMED' || match.status === 'SCHEDULED'))) {
+    const { half, minute } = getHalfInfo(match)
+    return (
+      <span className="live-badge live-badge--live">
+        <span className="live-dot" />
+        {half}{minute ? ` · ${minute}` : ''}
+      </span>
+    )
   }
   return <span className="live-badge live-badge--upcoming">{formatDate(match.utc_date)}</span>
 }
