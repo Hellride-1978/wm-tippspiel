@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { fetchWcMatches, flagForTla } from '@/lib/football-api'
-import { upsertMatches, getUnscoredTipsForMatch, awardPoints } from '@/lib/db'
+import { fetchWcGames, flagForName, localDateToUtc, mapStatus, mapStage } from '@/lib/worldcup-api'
+import { upsertMatches, upsertMatchesBase, getManualOverrideIds, getUnscoredTipsForMatch, awardPoints } from '@/lib/db'
 import { getSession } from '@/lib/auth'
 
 function calcPoints(tH: number, tA: number, mH: number, mA: number): number {
@@ -16,47 +16,63 @@ export async function GET(request: Request) {
     const session = await getSession()
     if (!session?.isAdmin) return NextResponse.json({ error: 'Nicht autorisiert.' }, { status: 401 })
   }
-  try {
-    const apiMatches = await fetchWcMatches()
-    const rows = apiMatches.map(m => {
-      const homeId = m.homeTeam.id
-      let homeYellow = 0, awayYellow = 0, homeRed = 0, awayRed = 0
-      for (const b of m.bookings ?? []) {
-        const isHome = b.team.id === homeId
-        if (b.card === 'YELLOW') { isHome ? homeYellow++ : awayYellow++ }
-        else if (b.card === 'RED' || b.card === 'YELLOW_RED') { isHome ? homeRed++ : awayRed++ }
-      }
-      // Nur nicht-null Scores in den Upsert aufnehmen — verhindert, dass
-      // null-Werte von football-data.org (Free Tier) manuell gesetzte Scores überschreiben
-      const scoreFields = m.score.fullTime.home !== null
-        ? { home_score: m.score.fullTime.home, away_score: m.score.fullTime.away ?? null }
-        : {}
-      return {
-        match_id: m.id, home_team: m.homeTeam.name ?? 'TBD', away_team: m.awayTeam.name ?? 'TBD',
-        home_team_flag: flagForTla(m.homeTeam.tla), away_team_flag: flagForTla(m.awayTeam.tla),
-        utc_date: m.utcDate, status: m.status, ...scoreFields,
-        minute: m.minute ?? null,
-        home_yellow_cards: homeYellow, away_yellow_cards: awayYellow,
-        home_red_cards: homeRed, away_red_cards: awayRed,
-        matchday: m.matchday ?? null, stage: m.stage ?? null,
-        group_name: m.group ?? null, last_updated: new Date().toISOString(),
-      }
-    })
-    await upsertMatches(rows)
 
-    const finished = rows.filter(r => r.status === 'FINISHED' && 'home_score' in r && r.home_score !== null && r.away_score !== null)
-    let scored = 0
-    for (const match of finished) {
-      const tips = await getUnscoredTipsForMatch(match.match_id)
-      for (const tip of tips) {
-        await awardPoints(tip.id, calcPoints(tip.home_goals, tip.away_goals, match.home_score!, match.away_score!))
-        scored++
-      }
-    }
-    return NextResponse.json({ ok: true, synced: rows.length, finished: finished.length, scored })
+  let games
+  try {
+    games = await fetchWcGames()
   } catch (err) {
-    console.error('[sync-matches]', err)
-    const msg = err instanceof Error ? err.message : JSON.stringify(err)
-    return NextResponse.json({ error: msg }, { status: 500 })
+    console.error('[sync-matches] worldcup26.ir nicht erreichbar:', err)
+    return NextResponse.json({ ok: false, error: 'API nicht erreichbar, Cache bleibt erhalten.' })
   }
+
+  const manualIds = await getManualOverrideIds()
+
+  const rows = games.map(g => {
+    const { status, minute } = mapStatus(g)
+    const homeScore = g.home_score != null && g.home_score !== 'null' ? parseInt(g.home_score) : null
+    const awayScore = g.away_score != null && g.away_score !== 'null' ? parseInt(g.away_score) : null
+    return {
+      match_id: parseInt(g.id),
+      home_team: g.home_team_name_en,
+      away_team: g.away_team_name_en,
+      home_team_flag: flagForName(g.home_team_name_en),
+      away_team_flag: flagForName(g.away_team_name_en),
+      utc_date: localDateToUtc(g.local_date),
+      status,
+      minute,
+      home_score: homeScore,
+      away_score: awayScore,
+      stage: mapStage(g.type, g.group),
+      group_name: g.group ?? null,
+      matchday: g.matchday ? parseInt(g.matchday) : null,
+      last_updated: new Date().toISOString(),
+    }
+  })
+
+  // Matches mit manuellem Override: Score-Felder nicht überschreiben
+  const baseRows = rows
+    .filter(r => manualIds.has(r.match_id))
+    .map(({ home_score, away_score, ...rest }) => rest)
+  const fullRows = rows.filter(r => !manualIds.has(r.match_id))
+
+  try {
+    if (fullRows.length > 0) await upsertMatches(fullRows)
+    if (baseRows.length > 0) await upsertMatchesBase(baseRows)
+  } catch (err) {
+    console.error('[sync-matches] DB-Fehler:', err)
+    return NextResponse.json({ error: 'DB-Fehler' }, { status: 500 })
+  }
+
+  // Punkte vergeben für abgeschlossene Spiele mit echtem Score
+  const finished = fullRows.filter(r => r.status === 'FINISHED' && r.home_score !== null && r.away_score !== null)
+  let scored = 0
+  for (const match of finished) {
+    const tips = await getUnscoredTipsForMatch(match.match_id)
+    for (const tip of tips) {
+      await awardPoints(tip.id, calcPoints(tip.home_goals, tip.away_goals, match.home_score!, match.away_score!))
+      scored++
+    }
+  }
+
+  return NextResponse.json({ ok: true, synced: rows.length, finished: finished.length, scored })
 }

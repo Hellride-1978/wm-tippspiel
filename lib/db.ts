@@ -40,13 +40,12 @@ export interface WmMatch {
   home_score: number | null
   away_score: number | null
   minute: number | null
-  home_yellow_cards: number
-  away_yellow_cards: number
-  home_red_cards: number
-  away_red_cards: number
   matchday: number | null
   stage: string | null
   group_name: string | null
+  manual_home_score: number | null
+  manual_away_score: number | null
+  use_manual_score: boolean
   last_updated: string
 }
 
@@ -109,10 +108,27 @@ export async function upsertMatches(matches: Partial<WmMatch>[]) {
   if (error) throw error
 }
 
+export async function upsertMatchesBase(matches: Omit<Partial<WmMatch>, 'home_score' | 'away_score'>[]) {
+  if (matches.length === 0) return
+  const { error } = await getClient().from('wm_matches_cache').upsert(matches, { onConflict: 'match_id' })
+  if (error) throw error
+}
+
+export async function getManualOverrideIds(): Promise<Set<number>> {
+  const { data } = await getClient().from('wm_matches_cache').select('match_id').eq('use_manual_score', true)
+  return new Set((data ?? []).map((r: { match_id: number }) => r.match_id))
+}
+
 export async function setMatchScore(matchId: number, homeScore: number, awayScore: number) {
   const { error } = await getClient()
     .from('wm_matches_cache')
-    .update({ home_score: homeScore, away_score: awayScore, status: 'FINISHED', last_updated: new Date().toISOString() })
+    .update({
+      manual_home_score: homeScore,
+      manual_away_score: awayScore,
+      use_manual_score: true,
+      status: 'FINISHED',
+      last_updated: new Date().toISOString(),
+    })
     .eq('match_id', matchId)
   if (error) throw error
 }
