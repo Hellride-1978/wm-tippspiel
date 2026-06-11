@@ -154,7 +154,18 @@ export async function getLiveOrNextMatch(): Promise<WmMatch | null> {
     .limit(1)
   if (live && live.length > 0) return live[0] as WmMatch
 
-  // 2. Spiel hat laut Zeitplan begonnen, Status aber noch TIMED/SCHEDULED
+  // 2. Kürzlich beendetes Spiel (bis 3h nach Anpfiff)
+  const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
+  const { data: finished } = await client
+    .from('wm_matches_cache')
+    .select('*')
+    .eq('status', 'FINISHED')
+    .gt('utc_date', threeHoursAgo)
+    .order('utc_date', { ascending: false })
+    .limit(1)
+  if (finished && finished.length > 0) return finished[0] as WmMatch
+
+  // 3. Spiel hat laut Zeitplan begonnen, Status aber noch TIMED/SCHEDULED
   //    (football-data.org aktualisiert Status mit Verzögerung)
   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
   const { data: recent } = await client
