@@ -39,12 +39,12 @@ function getHalfInfo(match: MatchData): { half: string; minute: string } {
     if (match.minute <= 90) return { half: '2. HZ', minute: `${match.minute}'` }
     return { half: 'Verl.', minute: `${match.minute}'` }
   }
-  // Sonst aus verstrichener Zeit seit Anpfiff schätzen
+  // Sonst aus verstrichener Zeit seit Anpfiff schätzen (inkl. ~20min Pause)
   const elapsed = Math.floor((Date.now() - new Date(match.utc_date).getTime()) / 60000)
-  if (elapsed <= 45) return { half: '1. HZ', minute: `~${elapsed}'` }
-  if (elapsed <= 60) return { half: 'Halbzeit', minute: '' }
-  if (elapsed <= 105) return { half: '2. HZ', minute: `~${Math.min(elapsed - 15, 90)}'` }
-  return { half: 'Nachspielzeit', minute: `~${elapsed - 15}'` }
+  if (elapsed <= 47) return { half: '1. HZ', minute: `~${Math.min(elapsed, 45)}'` }
+  if (elapsed <= 67) return { half: 'Halbzeit', minute: '' }
+  if (elapsed <= 112) return { half: '2. HZ', minute: `~${Math.min(elapsed - 22, 90)}'` }
+  return { half: 'Nachspielzeit', minute: '' }
 }
 
 function StatusBadge({ match }: { match: MatchData }) {
@@ -130,6 +130,10 @@ export function LiveMatchWidget({ currentUsername }: { currentUsername: string }
         )}
       </div>
 
+      {isPostKickoff && match.home_score === null && (
+        <p className="live-no-data">Live-Daten verzögert — Ergebnis nicht verfügbar</p>
+      )}
+
       <div className="live-matchup">
         <div className="live-team live-team--home">
           <span className="live-flag">{match.home_team_flag}</span>
@@ -142,7 +146,7 @@ export function LiveMatchWidget({ currentUsername }: { currentUsername: string }
             <span className="live-vs">vs</span>
           ) : (
             <span className="live-score">
-              {match.home_score ?? 0} : {match.away_score ?? 0}
+              {match.home_score ?? '?'} : {match.away_score ?? '?'}
             </span>
           )}
         </div>

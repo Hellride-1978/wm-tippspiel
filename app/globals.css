@@ -930,6 +930,13 @@ input, textarea { font-family: inherit; }
   color: var(--ink-3);
 }
 
+.live-no-data {
+  font-size: 11px;
+  color: var(--ink-3);
+  text-align: center;
+  margin: 0 0 8px;
+}
+
 .live-matchup {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
