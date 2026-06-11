@@ -158,7 +158,19 @@ export async function getLiveOrNextMatch(): Promise<WmMatch | null> {
     .gt('utc_date', new Date().toISOString())
     .order('utc_date', { ascending: true })
     .limit(1)
-  return next && next.length > 0 ? (next[0] as WmMatch) : null
+  if (next && next.length > 0) return next[0] as WmMatch
+
+  // Fallback: Spiel hat laut Zeitplan begonnen, aber Sync hat Status noch nicht aktualisiert
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+  const { data: recent } = await client
+    .from('wm_matches_cache')
+    .select('*')
+    .in('status', ['SCHEDULED', 'TIMED'])
+    .gt('utc_date', twoHoursAgo)
+    .lte('utc_date', new Date().toISOString())
+    .order('utc_date', { ascending: false })
+    .limit(1)
+  return recent && recent.length > 0 ? (recent[0] as WmMatch) : null
 }
 
 export async function getTipsForMatch(matchId: number): Promise<WmTip[]> {
