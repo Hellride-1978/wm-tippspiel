@@ -26,11 +26,16 @@ export async function GET(request: Request) {
         if (b.card === 'YELLOW') { isHome ? homeYellow++ : awayYellow++ }
         else if (b.card === 'RED' || b.card === 'YELLOW_RED') { isHome ? homeRed++ : awayRed++ }
       }
+      // Nur nicht-null Scores in den Upsert aufnehmen — verhindert, dass
+      // null-Werte von football-data.org (Free Tier) manuell gesetzte Scores überschreiben
+      const scoreFields = m.score.fullTime.home !== null
+        ? { home_score: m.score.fullTime.home, away_score: m.score.fullTime.away ?? null }
+        : {}
       return {
         match_id: m.id, home_team: m.homeTeam.name ?? 'TBD', away_team: m.awayTeam.name ?? 'TBD',
         home_team_flag: flagForTla(m.homeTeam.tla), away_team_flag: flagForTla(m.awayTeam.tla),
-        utc_date: m.utcDate, status: m.status, home_score: m.score.fullTime.home ?? null,
-        away_score: m.score.fullTime.away ?? null, minute: m.minute ?? null,
+        utc_date: m.utcDate, status: m.status, ...scoreFields,
+        minute: m.minute ?? null,
         home_yellow_cards: homeYellow, away_yellow_cards: awayYellow,
         home_red_cards: homeRed, away_red_cards: awayRed,
         matchday: m.matchday ?? null, stage: m.stage ?? null,
@@ -39,7 +44,7 @@ export async function GET(request: Request) {
     })
     await upsertMatches(rows)
 
-    const finished = rows.filter(r => r.status === 'FINISHED' && r.home_score !== null && r.away_score !== null)
+    const finished = rows.filter(r => r.status === 'FINISHED' && 'home_score' in r && r.home_score !== null && r.away_score !== null)
     let scored = 0
     for (const match of finished) {
       const tips = await getUnscoredTipsForMatch(match.match_id)
