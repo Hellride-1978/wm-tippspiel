@@ -143,6 +143,9 @@ export async function awardPoints(tipId: string, points: number) {
 
 export async function getLiveOrNextMatch(): Promise<WmMatch | null> {
   const client = getClient()
+  const now = new Date().toISOString()
+
+  // 1. Echtes Live-Spiel (Status von football-data.org)
   const { data: live } = await client
     .from('wm_matches_cache')
     .select('*')
@@ -151,26 +154,28 @@ export async function getLiveOrNextMatch(): Promise<WmMatch | null> {
     .limit(1)
   if (live && live.length > 0) return live[0] as WmMatch
 
-  const { data: next } = await client
-    .from('wm_matches_cache')
-    .select('*')
-    .in('status', ['SCHEDULED', 'TIMED'])
-    .gt('utc_date', new Date().toISOString())
-    .order('utc_date', { ascending: true })
-    .limit(1)
-  if (next && next.length > 0) return next[0] as WmMatch
-
-  // Fallback: Spiel hat laut Zeitplan begonnen, aber Sync hat Status noch nicht aktualisiert
+  // 2. Spiel hat laut Zeitplan begonnen, Status aber noch TIMED/SCHEDULED
+  //    (football-data.org aktualisiert Status mit Verzögerung)
   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
   const { data: recent } = await client
     .from('wm_matches_cache')
     .select('*')
     .in('status', ['SCHEDULED', 'TIMED'])
     .gt('utc_date', twoHoursAgo)
-    .lte('utc_date', new Date().toISOString())
+    .lte('utc_date', now)
     .order('utc_date', { ascending: false })
     .limit(1)
-  return recent && recent.length > 0 ? (recent[0] as WmMatch) : null
+  if (recent && recent.length > 0) return recent[0] as WmMatch
+
+  // 3. Nächstes geplantes Spiel
+  const { data: next } = await client
+    .from('wm_matches_cache')
+    .select('*')
+    .in('status', ['SCHEDULED', 'TIMED'])
+    .gt('utc_date', now)
+    .order('utc_date', { ascending: true })
+    .limit(1)
+  return next && next.length > 0 ? (next[0] as WmMatch) : null
 }
 
 export async function getTipsForMatch(matchId: number): Promise<WmTip[]> {

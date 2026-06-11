@@ -33,7 +33,9 @@ interface LiveData {
 }
 
 function StatusBadge({ match }: { match: MatchData }) {
-  if (match.status === 'IN_PLAY') {
+  const kickedOff = new Date(match.utc_date) <= new Date()
+
+  if (match.status === 'IN_PLAY' || (kickedOff && (match.status === 'TIMED' || match.status === 'SCHEDULED'))) {
     return (
       <span className="live-badge live-badge--live">
         <span className="live-dot" />
@@ -99,8 +101,9 @@ export function LiveMatchWidget({ currentUsername }: { currentUsername: string }
   if (!data?.match) return null
 
   const { match, tips } = data
-  const isPostKickoff = ['IN_PLAY', 'PAUSED', 'FINISHED'].includes(match.status)
-  const isScheduled = match.status === 'SCHEDULED' || match.status === 'TIMED'
+  const kickedOff = new Date(match.utc_date) <= new Date()
+  const isPostKickoff = ['IN_PLAY', 'PAUSED', 'FINISHED'].includes(match.status) || kickedOff
+  const isScheduled = !isPostKickoff
 
   return (
     <div className="live-widget card-sm">
