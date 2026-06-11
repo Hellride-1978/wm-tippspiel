@@ -109,6 +109,19 @@ export async function upsertMatches(matches: Partial<WmMatch>[]) {
   if (error) throw error
 }
 
+export async function setMatchScore(matchId: number, homeScore: number, awayScore: number) {
+  const { error } = await getClient()
+    .from('wm_matches_cache')
+    .update({ home_score: homeScore, away_score: awayScore, status: 'FINISHED', last_updated: new Date().toISOString() })
+    .eq('match_id', matchId)
+  if (error) throw error
+}
+
+export async function updateTipPoints(tipId: string, points: number) {
+  const { error } = await getClient().from('wm_tips').update({ points_awarded: points }).eq('id', tipId)
+  if (error) throw error
+}
+
 // ─── Tips ─────────────────────────────────────────────────────────────────────
 
 export async function getTipByUserAndMatch(userId: string, matchId: number): Promise<WmTip | null> {

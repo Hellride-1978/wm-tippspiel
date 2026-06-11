@@ -45,9 +45,14 @@ export default function Nav({ username, isAdmin }: Props) {
               </Link>
             ))}
             {isAdmin && (
-              <a href="/api/sync-matches" className="nav-link" target="_blank" rel="noopener noreferrer">
-                Sync ↗
-              </a>
+              <>
+                <Link href="/admin" className={`nav-link${pathname.startsWith('/admin') ? ' active' : ''}`}>
+                  Admin
+                </Link>
+                <a href="/api/sync-matches" className="nav-link" target="_blank" rel="noopener noreferrer">
+                  Sync ↗
+                </a>
+              </>
             )}
           </div>
 
@@ -79,9 +84,14 @@ export default function Nav({ username, isAdmin }: Props) {
             </Link>
           ))}
           {isAdmin && (
-            <a href="/api/sync-matches" className="nav-mobile-link" target="_blank" rel="noopener noreferrer" onClick={close}>
-              Sync ↗
-            </a>
+            <>
+              <Link href="/admin" className={`nav-mobile-link${pathname.startsWith('/admin') ? ' active' : ''}`} onClick={close}>
+                Admin
+              </Link>
+              <a href="/api/sync-matches" className="nav-mobile-link" target="_blank" rel="noopener noreferrer" onClick={close}>
+                Sync ↗
+              </a>
+            </>
           )}
           <div className="nav-mobile-footer">
             <span className="nav-mobile-user">@{username}</span>
