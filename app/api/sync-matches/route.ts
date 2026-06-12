@@ -27,7 +27,8 @@ export async function GET(request: Request) {
 
   const manualIds = await getManualOverrideIds()
 
-  const rows = games.map(g => {
+  // Skip knockout games where participants aren't determined yet (null team names)
+  const rows = games.filter(g => g.home_team_name_en && g.away_team_name_en).map(g => {
     const { status, minute } = mapStatus(g)
     const homeScore = g.home_score != null && g.home_score !== 'null' ? parseInt(g.home_score) : null
     const awayScore = g.away_score != null && g.away_score !== 'null' ? parseInt(g.away_score) : null
