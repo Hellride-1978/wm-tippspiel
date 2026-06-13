@@ -29,8 +29,11 @@ export async function GET(request: Request) {
     const utc_date = localDateToUtc(g.local_date)
     // API meldet manchmal IN_PLAY/PAUSED bevor das Spiel überhaupt angefangen hat
     const status = (['IN_PLAY', 'PAUSED'].includes(rawStatus) && utc_date > now) ? 'SCHEDULED' : rawStatus
-    const homeScore = g.home_score != null && g.home_score !== 'null' ? parseInt(g.home_score) : null
-    const awayScore = g.away_score != null && g.away_score !== 'null' ? parseInt(g.away_score) : null
+    const rawHome = g.home_score != null && g.home_score !== 'null' ? parseInt(g.home_score) : null
+    const rawAway = g.away_score != null && g.away_score !== 'null' ? parseInt(g.away_score) : null
+    // Sanity-check: API liefert manchmal Phantomwerte (z.B. 1405) für nicht gestartete Spiele
+    const homeScore = rawHome !== null && rawHome >= 0 && rawHome <= 30 ? rawHome : null
+    const awayScore = rawAway !== null && rawAway >= 0 && rawAway <= 30 ? rawAway : null
     return {
       match_id: parseInt(g.id),
       home_team: g.home_team_name_en,

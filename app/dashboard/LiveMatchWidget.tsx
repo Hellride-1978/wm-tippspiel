@@ -118,7 +118,7 @@ export function LiveMatchWidget({ currentUsername }: { currentUsername: string }
 
   const { match, tips } = data
   const kickedOff = new Date(match.utc_date) <= new Date()
-  const isPostKickoff = (['IN_PLAY', 'PAUSED', 'FINISHED'].includes(match.status) && kickedOff) || (kickedOff && match.status === 'SCHEDULED')
+  const isPostKickoff = kickedOff
   const isScheduled = !isPostKickoff
 
   return (
