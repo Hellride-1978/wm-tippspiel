@@ -33,18 +33,13 @@ interface LiveData {
 }
 
 function getHalfInfo(match: MatchData): { half: string; minute: string } {
-  // Wenn die API eine Minute liefert, daraus die Halbzeit ableiten
   if (match.minute != null) {
     if (match.minute <= 45) return { half: '1. HZ', minute: `${match.minute}'` }
     if (match.minute <= 90) return { half: '2. HZ', minute: `${match.minute}'` }
     return { half: 'Verl.', minute: `${match.minute}'` }
   }
-  // Sonst aus verstrichener Zeit seit Anpfiff schätzen (inkl. ~20min Pause)
-  const elapsed = Math.floor((Date.now() - new Date(match.utc_date).getTime()) / 60000)
-  if (elapsed <= 47) return { half: '1. HZ', minute: `~${Math.min(elapsed, 45)}'` }
-  if (elapsed <= 67) return { half: 'Halbzeit', minute: '' }
-  if (elapsed <= 112) return { half: '2. HZ', minute: `~${Math.min(elapsed - 22, 90)}'` }
-  return { half: 'Nachspielzeit', minute: '' }
+  // Keine Minute von der API — nicht raten, zu fehleranfällig
+  return { half: 'Live', minute: '' }
 }
 
 function StatusBadge({ match }: { match: MatchData }) {
