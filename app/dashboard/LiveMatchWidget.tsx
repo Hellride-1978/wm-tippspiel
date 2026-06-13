@@ -130,10 +130,6 @@ export function LiveMatchWidget({ currentUsername }: { currentUsername: string }
         )}
       </div>
 
-      {isPostKickoff && match.home_score === null && (
-        <p className="live-no-data">Live-Daten verzögert — Ergebnis nicht verfügbar</p>
-      )}
-
       <div className="live-matchup">
         <div className="live-team live-team--home">
           <span className="live-flag">{match.home_team_flag}</span>
@@ -146,7 +142,7 @@ export function LiveMatchWidget({ currentUsername }: { currentUsername: string }
             <span className="live-vs">vs</span>
           ) : (
             <span className="live-score">
-              {match.home_score ?? '?'} : {match.away_score ?? '?'}
+              {match.home_score ?? 0} : {match.away_score ?? 0}
             </span>
           )}
         </div>
