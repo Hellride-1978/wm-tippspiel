@@ -50,13 +50,13 @@ function getHalfInfo(match: MatchData): { half: string; minute: string } {
 function StatusBadge({ match }: { match: MatchData }) {
   const kickedOff = new Date(match.utc_date) <= new Date()
 
-  if (match.status === 'PAUSED') {
+  if (match.status === 'PAUSED' && kickedOff) {
     return <span className="live-badge live-badge--paused">Halbzeit</span>
   }
   if (match.status === 'FINISHED') {
     return <span className="live-badge live-badge--finished">Ende</span>
   }
-  if (match.status === 'IN_PLAY' || (kickedOff && (match.status === 'TIMED' || match.status === 'SCHEDULED'))) {
+  if ((match.status === 'IN_PLAY' && kickedOff) || (kickedOff && (match.status === 'TIMED' || match.status === 'SCHEDULED'))) {
     const { half, minute } = getHalfInfo(match)
     return (
       <span className="live-badge live-badge--live">
@@ -118,7 +118,7 @@ export function LiveMatchWidget({ currentUsername }: { currentUsername: string }
 
   const { match, tips } = data
   const kickedOff = new Date(match.utc_date) <= new Date()
-  const isPostKickoff = ['IN_PLAY', 'PAUSED', 'FINISHED'].includes(match.status) || kickedOff
+  const isPostKickoff = (['IN_PLAY', 'PAUSED', 'FINISHED'].includes(match.status) && kickedOff) || (kickedOff && match.status === 'SCHEDULED')
   const isScheduled = !isPostKickoff
 
   return (
