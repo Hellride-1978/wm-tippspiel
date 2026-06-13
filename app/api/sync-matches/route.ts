@@ -1,13 +1,8 @@
 import { NextResponse } from 'next/server'
 import { fetchWcGames, flagForName, localDateToUtc, mapStatus, mapStage } from '@/lib/worldcup-api'
-import { upsertMatches, upsertMatchesBase, getManualOverrideIds, getUnscoredTipsForMatch, awardPoints } from '@/lib/db'
+import { upsertMatches, upsertMatchesBase, getManualOverrideIds, getUnscoredTipsForMatch, awardPoints, getAllUsernames } from '@/lib/db'
 import { getSession } from '@/lib/auth'
-
-function calcPoints(tH: number, tA: number, mH: number, mA: number): number {
-  if (tH === mH && tA === mA) return 3
-  if (Math.sign(tH - tA) === Math.sign(mH - mA)) return 1
-  return 0
-}
+import { calculatePoints } from '@/lib/points'
 
 export async function GET(request: Request) {
   const cronSecret = request.headers.get('x-cron-secret')
@@ -67,10 +62,14 @@ export async function GET(request: Request) {
   // Punkte vergeben für abgeschlossene Spiele mit echtem Score
   const finished = fullRows.filter(r => r.status === 'FINISHED' && r.home_score !== null && r.away_score !== null)
   let scored = 0
+  const usernames = finished.length > 0 ? await getAllUsernames() : []
+  const usernameMap = new Map(usernames.map(u => [u.id, u.username]))
   for (const match of finished) {
     const tips = await getUnscoredTipsForMatch(match.match_id)
     for (const tip of tips) {
-      await awardPoints(tip.id, calcPoints(tip.home_goals, tip.away_goals, match.home_score!, match.away_score!))
+      const pts = calculatePoints(tip.home_goals, tip.away_goals, match.home_score!, match.away_score!)
+      console.log(`[wm/points] ${usernameMap.get(tip.user_id) ?? tip.user_id} | ${match.home_team} vs ${match.away_team} | Tipp: ${tip.home_goals}:${tip.away_goals} | Ergebnis: ${match.home_score}:${match.away_score} | Punkte: ${pts}`)
+      await awardPoints(tip.id, pts)
       scored++
     }
   }

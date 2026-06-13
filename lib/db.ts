@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { calculatePoints } from '@/lib/points'
 
 function getClient() {
   return createClient(
@@ -136,6 +137,28 @@ export async function setMatchScore(matchId: number, homeScore: number, awayScor
 export async function updateTipPoints(tipId: string, points: number) {
   const { error } = await getClient().from('wm_tips').update({ points_awarded: points }).eq('id', tipId)
   if (error) throw error
+}
+
+export async function awardPointsForAllTips(matchId: number, homeScore: number, awayScore: number): Promise<number> {
+  const tips = await getTipsForMatch(matchId)
+  for (const tip of tips) {
+    await updateTipPoints(tip.id, calculatePoints(tip.home_goals, tip.away_goals, homeScore, awayScore))
+  }
+  return tips.length
+}
+
+export async function getFinishedMatches(): Promise<WmMatch[]> {
+  const { data } = await getClient()
+    .from('wm_matches_cache')
+    .select('*')
+    .eq('status', 'FINISHED')
+    .order('utc_date', { ascending: false })
+  return data ?? []
+}
+
+export async function getAllTips(): Promise<WmTip[]> {
+  const { data } = await getClient().from('wm_tips').select('*')
+  return data ?? []
 }
 
 // ─── Tips ─────────────────────────────────────────────────────────────────────

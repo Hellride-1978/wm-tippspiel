@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { getLiveOrNextMatch, getTipsForMatch, getAllUsernames } from '@/lib/db'
-
-function calcPoints(tH: number, tA: number, mH: number | null, mA: number | null): number {
-  if (mH === null || mA === null) return 0
-  if (tH === mH && tA === mA) return 3
-  if (Math.sign(tH - tA) === Math.sign(mH - mA)) return 1
-  return 0
-}
+import { calculatePoints } from '@/lib/points'
 
 export async function GET() {
   const session = await getSession()
@@ -27,12 +21,16 @@ export async function GET() {
       getAllUsernames(),
     ])
     const userMap = new Map(users.map(u => [u.id, u.username]))
+    const calcPts = (tH: number, tA: number) =>
+      match.home_score != null && match.away_score != null
+        ? calculatePoints(tH, tA, match.home_score, match.away_score)
+        : 0
     tips = rawTips
       .map(t => ({
         username: userMap.get(t.user_id) ?? 'Unbekannt',
         home_goals: t.home_goals,
         away_goals: t.away_goals,
-        current_points: calcPoints(t.home_goals, t.away_goals, match.home_score, match.away_score),
+        current_points: calcPts(t.home_goals, t.away_goals),
       }))
       .sort((a, b) => b.current_points - a.current_points || a.username.localeCompare(b.username))
   }

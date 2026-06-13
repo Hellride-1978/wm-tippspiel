@@ -25,6 +25,7 @@ export default function Nav({ username, isAdmin }: Props) {
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/leaderboard', label: 'Tabelle' },
     { href: '/matches', label: 'Spiele' },
+    { href: '/history', label: 'Historie' },
   ]
 
   function close() { setMenuOpen(false) }

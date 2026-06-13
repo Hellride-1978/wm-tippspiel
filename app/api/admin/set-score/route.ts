@@ -1,12 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { setMatchScore, getTipsForMatch, updateTipPoints } from '@/lib/db'
-
-function calcPoints(tH: number, tA: number, mH: number, mA: number): number {
-  if (tH === mH && tA === mA) return 3
-  if (Math.sign(tH - tA) === Math.sign(mH - mA)) return 1
-  return 0
-}
+import { calculatePoints } from '@/lib/points'
 
 export async function POST(request: Request) {
   const session = await getSession()
@@ -21,7 +16,7 @@ export async function POST(request: Request) {
 
   const tips = await getTipsForMatch(matchId)
   for (const tip of tips) {
-    await updateTipPoints(tip.id, calcPoints(tip.home_goals, tip.away_goals, homeScore, awayScore))
+    await updateTipPoints(tip.id, calculatePoints(tip.home_goals, tip.away_goals, homeScore, awayScore))
   }
 
   return NextResponse.json({ ok: true, scored: tips.length })
