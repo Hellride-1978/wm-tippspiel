@@ -99,8 +99,8 @@ export default async function HistoryPage() {
                         <td className="table-name">
                           @{t.username}{t.userId === session.userId ? ' (du)' : ''}
                         </td>
-                        <td style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontWeight: 600, fontSize: 14 }}>
-                          {t.home_goals} : {t.away_goals}
+                        <td style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap' }}>
+                          {t.home_goals}:{t.away_goals}
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <span className={`pts-badge pts-${t.points}`}>{t.points}</span>
