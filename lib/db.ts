@@ -147,6 +147,18 @@ export async function awardPointsForAllTips(matchId: number, homeScore: number, 
   return tips.length
 }
 
+export async function clearScoresForFutureMatches(): Promise<{ match_id: number; home_team: string; away_team: string }[]> {
+  const now = new Date().toISOString()
+  const { data, error } = await getClient()
+    .from('wm_matches_cache')
+    .update({ home_score: null, away_score: null, status: 'SCHEDULED', minute: null, last_updated: now })
+    .gt('utc_date', now)
+    .neq('status', 'FINISHED')
+    .select('match_id, home_team, away_team')
+  if (error) throw error
+  return data ?? []
+}
+
 export async function getFinishedMatches(): Promise<WmMatch[]> {
   const { data } = await getClient()
     .from('wm_matches_cache')
