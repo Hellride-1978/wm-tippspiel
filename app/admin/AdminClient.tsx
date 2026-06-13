@@ -10,6 +10,7 @@ export function AdminClient({ matches }: { matches: WmMatch[] }) {
   const [away, setAway] = useState('')
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<string | null>(null)
+  const [clearing, setClearing] = useState(false)
 
   const pastMatches = matches
     .filter(m => new Date(m.utc_date) <= new Date())
@@ -44,11 +45,34 @@ export function AdminClient({ matches }: { matches: WmMatch[] }) {
     }
   }
 
+  async function handleClearFutureScores() {
+    if (!confirm('Alle Scores für noch nicht gestartete Spiele löschen?')) return
+    setClearing(true)
+    try {
+      const res = await fetch('/api/admin/clear-future-scores', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) setResult(`✓ ${data.cleared} Spiele bereinigt`)
+      else setResult(`Fehler: ${data.error}`)
+    } finally {
+      setClearing(false)
+    }
+  }
+
   return (
     <div className="page">
       <div className="page-header">
         <h1 className="page-title">Admin</h1>
         <p className="page-sub">Ergebnisse manuell eintragen</p>
+      </div>
+
+      <div className="card-sm" style={{ marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>Cache bereinigen</div>
+          <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>Löscht fehlerhafte Scores für noch nicht gestartete Spiele</div>
+        </div>
+        <button className="btn btn-outline" onClick={handleClearFutureScores} disabled={clearing}>
+          {clearing ? 'Wird bereinigt…' : 'Scores zurücksetzen'}
+        </button>
       </div>
 
       <div className="card-sm" style={{ marginBottom: 24 }}>
