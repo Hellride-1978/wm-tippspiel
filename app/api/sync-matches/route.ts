@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { fetchWcGames, flagForName, localDateToUtc, mapStatus, mapStage } from '@/lib/worldcup-api'
-import { upsertMatches, upsertMatchesBase, getManualOverrideIds, getUnscoredTipsForMatch, awardPoints, getAllUsernames } from '@/lib/db'
+import { upsertMatches, upsertMatchesBase, getManualOverrideIds, getTipsForMatch, awardPoints, getAllUsernames } from '@/lib/db'
 import { getSession } from '@/lib/auth'
 import { calculatePoints } from '@/lib/points'
 
@@ -59,13 +59,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'DB-Fehler' }, { status: 500 })
   }
 
-  // Punkte vergeben für abgeschlossene Spiele mit echtem Score
+  // Punkte vergeben für abgeschlossene Spiele — ALLE Tips neu berechnen,
+  // damit Zwischenstand-Fehler beim nächsten Sync korrigiert werden.
   const finished = fullRows.filter(r => r.status === 'FINISHED' && r.home_score !== null && r.away_score !== null)
   let scored = 0
   const usernames = finished.length > 0 ? await getAllUsernames() : []
   const usernameMap = new Map(usernames.map(u => [u.id, u.username]))
   for (const match of finished) {
-    const tips = await getUnscoredTipsForMatch(match.match_id)
+    const tips = await getTipsForMatch(match.match_id)
     for (const tip of tips) {
       const pts = calculatePoints(tip.home_goals, tip.away_goals, match.home_score!, match.away_score!)
       console.log(`[wm/points] ${usernameMap.get(tip.user_id) ?? tip.user_id} | ${match.home_team} vs ${match.away_team} | Tipp: ${tip.home_goals}:${tip.away_goals} | Ergebnis: ${match.home_score}:${match.away_score} | Punkte: ${pts}`)
