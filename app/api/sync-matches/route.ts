@@ -23,8 +23,12 @@ export async function GET(request: Request) {
   const manualIds = await getManualOverrideIds()
 
   // Skip knockout games where participants aren't determined yet (null team names)
+  const now = new Date().toISOString()
   const rows = games.filter(g => g.home_team_name_en && g.away_team_name_en).map(g => {
-    const { status, minute } = mapStatus(g)
+    const { status: rawStatus, minute } = mapStatus(g)
+    const utc_date = localDateToUtc(g.local_date)
+    // API meldet manchmal IN_PLAY/PAUSED bevor das Spiel überhaupt angefangen hat
+    const status = (['IN_PLAY', 'PAUSED'].includes(rawStatus) && utc_date > now) ? 'SCHEDULED' : rawStatus
     const homeScore = g.home_score != null && g.home_score !== 'null' ? parseInt(g.home_score) : null
     const awayScore = g.away_score != null && g.away_score !== 'null' ? parseInt(g.away_score) : null
     return {
@@ -33,7 +37,7 @@ export async function GET(request: Request) {
       away_team: g.away_team_name_en,
       home_team_flag: flagForName(g.home_team_name_en),
       away_team_flag: flagForName(g.away_team_name_en),
-      utc_date: localDateToUtc(g.local_date),
+      utc_date,
       status,
       minute,
       home_score: homeScore,

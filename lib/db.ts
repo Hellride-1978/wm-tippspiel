@@ -197,11 +197,12 @@ export async function getLiveOrNextMatch(): Promise<WmMatch | null> {
   const client = getClient()
   const now = new Date().toISOString()
 
-  // 1. Echtes Live-Spiel (Status von football-data.org)
+  // 1. Echtes Live-Spiel — nur wenn Anstoßzeit bereits vergangen ist
   const { data: live } = await client
     .from('wm_matches_cache')
     .select('*')
     .in('status', ['IN_PLAY', 'PAUSED'])
+    .lte('utc_date', now)
     .order('utc_date', { ascending: true })
     .limit(1)
   if (live && live.length > 0) return live[0] as WmMatch
