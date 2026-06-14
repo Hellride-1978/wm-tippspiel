@@ -34,14 +34,14 @@ export function flagForName(name: string): string {
   return FLAG_MAP[name] ?? '🏳'
 }
 
-// local_date "MM/DD/YYYY HH:MM" assumed CST (UTC-6) → ISO UTC string
+// local_date "MM/DD/YYYY HH:MM" in CDT (UTC-5, Sommerzeit) → ISO UTC string
 export function localDateToUtc(localDate: string): string {
   const [datePart, timePart] = localDate.split(' ')
   const [month, day, year] = datePart.split('/')
   const [hour, minute] = timePart.split(':')
   const d = new Date(Date.UTC(
     parseInt(year), parseInt(month) - 1, parseInt(day),
-    parseInt(hour) + 6, parseInt(minute)
+    parseInt(hour) + 5, parseInt(minute)
   ))
   return d.toISOString()
 }
