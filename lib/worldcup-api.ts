@@ -8,10 +8,11 @@ export interface WorldcupGame {
   away_scorers: string | null
   group: string | null
   matchday: string | null
-  local_date: string   // "MM/DD/YYYY HH:MM" in CST (UTC-6)
-  finished: string     // "TRUE" | "FALSE"
-  time_elapsed: string // "notstarted" | "finished" | "HT" | "45'" | "67'" etc.
-  type: string         // "group" | "r32" | "r16" | "qf" | "sf" | "third" | "final"
+  local_date: string    // "MM/DD/YYYY HH:MM" in venue local time
+  finished: string      // "TRUE" | "FALSE"
+  time_elapsed: string  // "notstarted" | "finished" | "HT" | "45'" | "67'" etc.
+  type: string          // "group" | "r32" | "r16" | "qf" | "sf" | "third" | "final"
+  stadium_id: string | null
 }
 
 const FLAG_MAP: Record<string, string> = {
@@ -34,14 +35,25 @@ export function flagForName(name: string): string {
   return FLAG_MAP[name] ?? '🏳'
 }
 
-// local_date "MM/DD/YYYY HH:MM" in CDT (UTC-5, Sommerzeit) → ISO UTC string
-export function localDateToUtc(localDate: string): string {
+// Stadion-ID → UTC-Offset (Stunden zu addieren um lokale Zeit → UTC)
+// Mexico-Städte haben seit 2023 kein DST mehr (UTC-6 ganzjährig)
+// US/Kanada-Städte: CDT=UTC-5, EDT=UTC-4, PDT=UTC-7
+const STADIUM_UTC_OFFSETS: Record<string, number> = {
+  '1': 6, '2': 6, '3': 6,               // Mexico City, Guadalajara, Monterrey (CST, kein DST)
+  '4': 5, '5': 5, '6': 5,               // Dallas, Houston, Kansas City (CDT)
+  '7': 4, '8': 4, '9': 4, '10': 4, '11': 4, '12': 4, // Atlanta, Miami, Boston, Philadelphia, New York, Toronto (EDT)
+  '13': 7, '14': 7, '15': 7, '16': 7,   // Vancouver, Seattle, San Francisco, Los Angeles (PDT)
+}
+
+// local_date "MM/DD/YYYY HH:MM" in Stadion-Lokalzeit → ISO UTC string
+export function localDateToUtc(localDate: string, stadiumId: string | null = null): string {
+  const utcOffset = (stadiumId && STADIUM_UTC_OFFSETS[stadiumId]) ?? 5
   const [datePart, timePart] = localDate.split(' ')
   const [month, day, year] = datePart.split('/')
   const [hour, minute] = timePart.split(':')
   const d = new Date(Date.UTC(
     parseInt(year), parseInt(month) - 1, parseInt(day),
-    parseInt(hour) + 5, parseInt(minute)
+    parseInt(hour) + utcOffset, parseInt(minute)
   ))
   return d.toISOString()
 }

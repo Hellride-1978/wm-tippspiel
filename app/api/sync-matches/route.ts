@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   const now = new Date().toISOString()
   const rows = games.filter(g => g.home_team_name_en && g.away_team_name_en).map(g => {
     const { status: rawStatus, minute } = mapStatus(g)
-    const utc_date = localDateToUtc(g.local_date)
+    const utc_date = localDateToUtc(g.local_date, g.stadium_id ?? null)
     // API meldet manchmal IN_PLAY/PAUSED bevor das Spiel überhaupt angefangen hat
     const status = (['IN_PLAY', 'PAUSED'].includes(rawStatus) && utc_date > now) ? 'SCHEDULED' : rawStatus
     const rawHome = g.home_score != null && g.home_score !== 'null' ? parseInt(g.home_score) : null
