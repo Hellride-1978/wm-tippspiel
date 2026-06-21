@@ -124,6 +124,10 @@ export async function setMatchScore(matchId: number, homeScore: number, awayScor
   const { error } = await getClient()
     .from('wm_matches_cache')
     .update({
+      // home_score/away_score sind die angezeigten Felder — auch direkt setzen.
+      // Sync überschreibt diese bei use_manual_score=true nicht (upsertMatchesBase).
+      home_score: homeScore,
+      away_score: awayScore,
       manual_home_score: homeScore,
       manual_away_score: awayScore,
       use_manual_score: true,
