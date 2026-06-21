@@ -56,10 +56,12 @@ export async function GET(request: Request) {
     }
   })
 
-  // Matches mit manuellem Override: Score-Felder nicht überschreiben
+  // Matches mit manuellem Override: Score, Status UND Minute nicht überschreiben.
+  // (Die API meldet diese Spiele teils noch als notstarted/SCHEDULED, was sonst
+  //  ein manuell eingetragenes FINISHED-Ergebnis wieder verschwinden ließe.)
   const baseRows = rows
     .filter(r => manualIds.has(r.match_id))
-    .map(({ home_score, away_score, ...rest }) => rest)
+    .map(({ home_score, away_score, status, minute, ...rest }) => rest)
   const fullRows = rows.filter(r => !manualIds.has(r.match_id))
 
   try {
