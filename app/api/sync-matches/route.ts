@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { fetchWcGames, flagForName, localDateToUtc, mapStatus, mapStage } from '@/lib/worldcup-api'
-import { upsertMatches, upsertMatchesBase, getManualOverrideIds, getTipsForMatch, awardPoints, getAllUsernames } from '@/lib/db'
+import { upsertMatches, upsertMatchesBase, getManualOverrideIds, getTipsForMatch, awardPoints, getAllUsernames, hasActiveMatchWindow } from '@/lib/db'
 import { getSession } from '@/lib/auth'
 import { calculatePoints } from '@/lib/points'
 
@@ -8,11 +8,21 @@ import { calculatePoints } from '@/lib/points'
 export const maxDuration = 60
 
 export async function GET(request: Request) {
+  const isVercelCron = request.headers.get('x-vercel-cron') !== null
   const cronSecret = request.headers.get('x-cron-secret')
-  const isCron = cronSecret && cronSecret === process.env.CRON_SECRET
-  if (!isCron) {
+  const isExternalCron = cronSecret && cronSecret === process.env.CRON_SECRET
+  if (!isVercelCron && !isExternalCron) {
     const session = await getSession()
     if (!session?.isAdmin) return NextResponse.json({ error: 'Nicht autorisiert.' }, { status: 401 })
+  }
+
+  // Minutentakt-Schoner: die langsame externe API nur rufen, wenn ein Spiel
+  // läuft / gleich beginnt / kürzlich endete. So darf ein externer Scheduler
+  // jede Minute pollen, ohne 24/7 Function-Kosten zu erzeugen.
+  // Umgehung via ?force=1 oder Vercel-Tagescron (voller Sync für Spielplan/Bracket).
+  const force = isVercelCron || new URL(request.url).searchParams.get('force') === '1'
+  if (!force && !(await hasActiveMatchWindow())) {
+    return NextResponse.json({ ok: true, skipped: 'no active match window' })
   }
 
   let games

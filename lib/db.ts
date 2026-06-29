@@ -258,6 +258,23 @@ export async function getLiveOrNextMatch(): Promise<WmMatch | null> {
   return next && next.length > 0 ? (next[0] as WmMatch) : null
 }
 
+// Schoner für den Minutentakt-Sync: true, wenn gerade ein Spielfenster offen
+// ist (Anpfiff war vor <3.5h oder ist in <15min). Außerhalb dieser Fenster
+// braucht der Sync die langsame externe API nicht zu rufen.
+export async function hasActiveMatchWindow(): Promise<boolean> {
+  const client = getClient()
+  const now = Date.now()
+  const from = new Date(now - 3.5 * 60 * 60 * 1000).toISOString()
+  const to = new Date(now + 15 * 60 * 1000).toISOString()
+  const { data } = await client
+    .from('wm_matches_cache')
+    .select('match_id')
+    .gte('utc_date', from)
+    .lte('utc_date', to)
+    .limit(1)
+  return !!(data && data.length > 0)
+}
+
 export async function getTipsForMatch(matchId: number): Promise<WmTip[]> {
   const { data } = await getClient().from('wm_tips').select('*').eq('match_id', matchId)
   return data ?? []
