@@ -97,15 +97,27 @@ export function LiveMatchWidget({ currentUsername }: { currentUsername: string }
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // Immer alle 60s pollen: bei SCHEDULED damit der Wechsel zu Live nicht
-  // einen Reload erfordert; bei IN_PLAY/PAUSED für Live-Updates.
-  // Nur bei FINISHED stoppen.
+  // Poll-Intervall je nach Status: live alle 60s, sonst alle 5min (Wechsel
+  // SCHEDULED→Live wird so spätestens nach 5min erkannt). Nur bei FINISHED stop.
+  // Bei verstecktem Tab gar nicht pollen — spart enorm Server-Last, weil viele
+  // Nutzer das Dashboard rund um die Uhr offen lassen.
   useEffect(() => {
     if (initialLoad) return
     const status = data?.match?.status
     if (status === 'FINISHED') return
-    const interval = setInterval(fetchData, 60_000)
-    return () => clearInterval(interval)
+    const isLive = status === 'IN_PLAY' || status === 'PAUSED'
+    const delay = isLive ? 60_000 : 300_000
+
+    let interval: ReturnType<typeof setInterval> | null = null
+    const start = () => { if (!interval) interval = setInterval(fetchData, delay) }
+    const stop = () => { if (interval) { clearInterval(interval); interval = null } }
+
+    const onVisibility = () => {
+      if (document.hidden) { stop() } else { fetchData(); start() }
+    }
+    if (!document.hidden) start()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => { stop(); document.removeEventListener('visibilitychange', onVisibility) }
   }, [initialLoad, data, fetchData])
 
   if (initialLoad) return <div className="live-skeleton" aria-hidden="true" />
