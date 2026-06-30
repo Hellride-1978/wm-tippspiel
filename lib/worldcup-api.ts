@@ -13,6 +13,8 @@ export interface WorldcupGame {
   time_elapsed: string  // "notstarted" | "finished" | "HT" | "45'" | "67'" etc.
   type: string          // "group" | "r32" | "r16" | "qf" | "sf" | "third" | "final"
   stadium_id: string | null
+  home_penalty_score?: string | null  // nur bei Elfmeterschießen, sonst undefined/null
+  away_penalty_score?: string | null
 }
 
 const FLAG_MAP: Record<string, string> = {

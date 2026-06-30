@@ -174,7 +174,12 @@ export default function MatchesClient({ matches, myTips }: { matches: WmMatch[];
                                 <span className="match-team">{match.home_team_flag} {match.home_team}</span>
                                 <span className="match-vs">
                                   {finished && match.home_score !== null
-                                    ? <span className="score score-result">{match.home_score} : {match.away_score}</span>
+                                    ? <span className="score score-result">
+                                        {match.home_score} : {match.away_score}
+                                        {match.home_penalty_score != null && match.away_penalty_score != null && (
+                                          <span className="score-penalty"> n.E. {match.home_penalty_score}:{match.away_penalty_score}</span>
+                                        )}
+                                      </span>
                                     : 'vs'}
                                 </span>
                                 <span className="match-team match-team-away">{match.away_team} {match.away_team_flag}</span>

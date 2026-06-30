@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { getFinishedMatches, getAllTips, getAllUsernames } from '@/lib/db'
-import { calculatePoints } from '@/lib/points'
+import { calculatePoints, resultForScoring } from '@/lib/points'
 
 export async function GET() {
   const session = await getSession()
@@ -24,10 +24,10 @@ export async function GET() {
   let totalWrong = 0
 
   for (const match of matches) {
-    const resolvedHome = match.use_manual_score ? match.manual_home_score : match.home_score
-    const resolvedAway = match.use_manual_score ? match.manual_away_score : match.away_score
-
-    if (resolvedHome == null || resolvedAway == null) continue
+    const result = resultForScoring(match)
+    if (!result) continue
+    const resolvedHome = result.home
+    const resolvedAway = result.away
 
     const tips = tipsByMatch.get(match.match_id) ?? []
     const wrongs = []

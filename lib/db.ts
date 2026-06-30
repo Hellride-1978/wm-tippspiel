@@ -40,6 +40,8 @@ export interface WmMatch {
   status: string
   home_score: number | null
   away_score: number | null
+  home_penalty_score: number | null
+  away_penalty_score: number | null
   minute: number | null
   matchday: number | null
   stage: string | null
@@ -106,7 +108,16 @@ export async function getMatchById(matchId: number): Promise<WmMatch | null> {
 
 export async function upsertMatches(matches: Partial<WmMatch>[]) {
   const { error } = await getClient().from('wm_matches_cache').upsert(matches, { onConflict: 'match_id' })
-  if (error) throw error
+  if (!error) return
+  // Fallback: Elfmeter-Spalten existieren evtl. noch nicht (Migration ausstehend).
+  // Dann ohne diese Felder erneut versuchen, damit der Live-Sync nicht komplett scheitert.
+  if (error.message?.includes('penalty_score') || error.code === 'PGRST204') {
+    const stripped = matches.map(({ home_penalty_score, away_penalty_score, ...rest }) => rest)
+    const { error: retryError } = await getClient().from('wm_matches_cache').upsert(stripped, { onConflict: 'match_id' })
+    if (retryError) throw retryError
+    return
+  }
+  throw error
 }
 
 export async function upsertMatchesBase(matches: Omit<Partial<WmMatch>, 'home_score' | 'away_score'>[]) {

@@ -115,7 +115,12 @@ export default async function DashboardPage() {
                       <div className="tip-row-scores">
                         <span className="score">Tipp: {tip.home_goals}:{tip.away_goals}</span>
                         {match.status === 'FINISHED' && match.home_score !== null && (
-                          <span className="score score-result">Ergebnis: {match.home_score}:{match.away_score}</span>
+                          <span className="score score-result">
+                            Ergebnis: {match.home_score}:{match.away_score}
+                            {match.home_penalty_score != null && match.away_penalty_score != null && (
+                              <span className="score-penalty"> n.E. {match.home_penalty_score}:{match.away_penalty_score}</span>
+                            )}
+                          </span>
                         )}
                       </div>
                       {tip.points_awarded !== null && (

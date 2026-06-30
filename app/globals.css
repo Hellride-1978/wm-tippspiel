@@ -519,6 +519,7 @@ input, textarea { font-family: inherit; }
   color: var(--ink);
 }
 .score-result { color: var(--green); font-size: 16px; }
+.score-penalty { color: var(--ink-3); font-size: 12px; font-weight: 500; white-space: nowrap; }
 
 /* Punkte-Badge */
 .pts-badge {

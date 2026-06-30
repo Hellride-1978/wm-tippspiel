@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { fetchWcGames, flagForName, localDateToUtc, mapStatus, mapStage } from '@/lib/worldcup-api'
 import { upsertMatches, upsertMatchesBase, getManualOverrideIds, getTipsForMatch, awardPoints, getAllUsernames, hasActiveMatchWindow } from '@/lib/db'
 import { getSession } from '@/lib/auth'
-import { calculatePoints } from '@/lib/points'
+import { calculatePoints, resultForScoring } from '@/lib/points'
 
 // worldcup26.ir antwortet teils sehr langsam (>10s) — Vercel-Timeout hochsetzen
 export const maxDuration = 60
@@ -48,6 +48,12 @@ export async function GET(request: Request) {
     const scoresValid = rawHome !== null && rawAway !== null && rawHome >= 0 && rawAway >= 0 && rawHome <= 20 && rawAway <= 20
     const homeScore = scoresValid ? rawHome : null
     const awayScore = scoresValid ? rawAway : null
+    // Elfmeterschießen — nur gesetzt, wenn die API beide Werte liefert (K.o.-Spiele).
+    const rawHomePen = g.home_penalty_score != null && g.home_penalty_score !== 'null' ? parseInt(g.home_penalty_score) : null
+    const rawAwayPen = g.away_penalty_score != null && g.away_penalty_score !== 'null' ? parseInt(g.away_penalty_score) : null
+    const penValid = rawHomePen !== null && rawAwayPen !== null && !isNaN(rawHomePen) && !isNaN(rawAwayPen) && rawHomePen >= 0 && rawAwayPen >= 0 && rawHomePen <= 30 && rawAwayPen <= 30
+    const homePenaltyScore = penValid ? rawHomePen : null
+    const awayPenaltyScore = penValid ? rawAwayPen : null
     return {
       match_id: parseInt(g.id),
       home_team: g.home_team_name_en,
@@ -59,6 +65,8 @@ export async function GET(request: Request) {
       minute,
       home_score: homeScore,
       away_score: awayScore,
+      home_penalty_score: homePenaltyScore,
+      away_penalty_score: awayPenaltyScore,
       stage: mapStage(g.type, g.group),
       group_name: g.group ?? null,
       matchday: g.matchday ? parseInt(g.matchday) : null,
@@ -71,7 +79,7 @@ export async function GET(request: Request) {
   //  ein manuell eingetragenes FINISHED-Ergebnis wieder verschwinden ließe.)
   const baseRows = rows
     .filter(r => manualIds.has(r.match_id))
-    .map(({ home_score, away_score, status, minute, ...rest }) => rest)
+    .map(({ home_score, away_score, home_penalty_score, away_penalty_score, status, minute, ...rest }) => rest)
   const fullRows = rows.filter(r => !manualIds.has(r.match_id))
 
   try {
@@ -89,10 +97,14 @@ export async function GET(request: Request) {
   const usernames = finished.length > 0 ? await getAllUsernames() : []
   const usernameMap = new Map(usernames.map(u => [u.id, u.username]))
   for (const match of finished) {
+    const result = resultForScoring(match)
+    if (!result) continue
+    const penInfo = match.home_penalty_score != null && match.away_penalty_score != null
+      ? ` (n.E. ${match.home_penalty_score}:${match.away_penalty_score})` : ''
     const tips = await getTipsForMatch(match.match_id)
     for (const tip of tips) {
-      const pts = calculatePoints(tip.home_goals, tip.away_goals, match.home_score!, match.away_score!)
-      console.log(`[wm/points] ${usernameMap.get(tip.user_id) ?? tip.user_id} | ${match.home_team} vs ${match.away_team} | Tipp: ${tip.home_goals}:${tip.away_goals} | Ergebnis: ${match.home_score}:${match.away_score} | Punkte: ${pts}`)
+      const pts = calculatePoints(tip.home_goals, tip.away_goals, result.home, result.away)
+      console.log(`[wm/points] ${usernameMap.get(tip.user_id) ?? tip.user_id} | ${match.home_team} vs ${match.away_team} | Tipp: ${tip.home_goals}:${tip.away_goals} | Ergebnis: ${result.home}:${result.away}${penInfo} | Punkte: ${pts}`)
       await awardPoints(tip.id, pts)
       scored++
     }

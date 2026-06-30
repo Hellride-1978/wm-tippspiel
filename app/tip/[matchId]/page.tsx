@@ -47,6 +47,9 @@ export default async function TipPage({ params }: { params: Promise<{ matchId: s
         {match.status === 'FINISHED' && match.home_score !== null && (
           <div className="tip-result">
             Endergebnis: <strong className="score score-result">{match.home_score} : {match.away_score}</strong>
+            {match.home_penalty_score != null && match.away_penalty_score != null && (
+              <span className="score-penalty"> n.E. {match.home_penalty_score}:{match.away_penalty_score}</span>
+            )}
           </div>
         )}
 
