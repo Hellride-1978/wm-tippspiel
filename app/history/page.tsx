@@ -1,6 +1,6 @@
 import { getSession } from '@/lib/auth'
 import { getFinishedMatches, getAllTips, getAllUsernames } from '@/lib/db'
-import { calculatePoints } from '@/lib/points'
+import { calculatePoints, resultForScoring } from '@/lib/points'
 import { formatDate, stageLabel } from '../utils'
 
 export const metadata = { title: 'Spielhistorie' }
@@ -45,8 +45,12 @@ export default async function HistoryPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {matches.map(match => {
+          // Angezeigtes Ergebnis = reguläre Zeit; Elfmeterschießen separat als "n.E."
           const resolvedHome = match.use_manual_score ? match.manual_home_score : match.home_score
           const resolvedAway = match.use_manual_score ? match.manual_away_score : match.away_score
+          const hasPenalties = match.home_penalty_score != null && match.away_penalty_score != null
+          // Für die Wertung maßgebliches Ergebnis (Elfmetertore aufaddiert, kicktipp-Standard)
+          const scored = resultForScoring(match)
 
           const matchTips = tipsByMatch.get(match.match_id) ?? []
           const tippedUserIds = new Set(matchTips.map(t => t.user_id))
@@ -57,8 +61,8 @@ export default async function HistoryPage() {
             home_goals: tip.home_goals,
             away_goals: tip.away_goals,
             points: tip.points_awarded ?? (
-              resolvedHome != null && resolvedAway != null
-                ? calculatePoints(tip.home_goals, tip.away_goals, resolvedHome, resolvedAway)
+              scored
+                ? calculatePoints(tip.home_goals, tip.away_goals, scored.home, scored.away)
                 : 0
             ),
           })).sort((a, b) => b.points - a.points || a.username.localeCompare(b.username))
@@ -78,6 +82,9 @@ export default async function HistoryPage() {
                   <span className="match-team">{match.home_team_flag} {match.home_team}</span>
                   <span className="score score-result" style={{ fontSize: 20, textAlign: 'center' }}>
                     {resolvedHome} : {resolvedAway}
+                    {hasPenalties && (
+                      <span className="score-penalty" style={{ display: 'block' }}>n.E. {match.home_penalty_score}:{match.away_penalty_score}</span>
+                    )}
                   </span>
                   <span className="match-team match-team-away">{match.away_team} {match.away_team_flag}</span>
                 </div>
