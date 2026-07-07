@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { fetchWcGames, flagForName, localDateToUtc, mapStatus, mapStage } from '@/lib/worldcup-api'
-import { upsertMatches, upsertMatchesBase, getManualOverrideIds, getTipsForMatch, awardPoints, getAllUsernames, hasActiveMatchWindow } from '@/lib/db'
+import { upsertMatches, upsertMatchesBase, getManualOverrideIds, getUnscoredTipsForMatch, awardPoints, getAllUsernames, hasActiveMatchWindow } from '@/lib/db'
 import { getSession } from '@/lib/auth'
 import { calculatePoints, resultForScoring } from '@/lib/points'
 
@@ -90,8 +90,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'DB-Fehler' }, { status: 500 })
   }
 
-  // Punkte vergeben für abgeschlossene Spiele — ALLE Tips neu berechnen,
-  // damit Zwischenstand-Fehler beim nächsten Sync korrigiert werden.
+  // Punkte vergeben für abgeschlossene Spiele — nur noch unbepunktete Tips.
+  // Vorher wurden bei JEDEM Sync ALLE Tips ALLER beendeten Spiele neu berechnet;
+  // mit wachsender Anzahl beendeter Spiele lief das in den 60s-Timeout (504) und
+  // trieb die Vercel-Fluid-Kosten hoch. Trade-off: eine nachträgliche Ergebnis-
+  // korrektur der externen API (z. B. VAR nach "finished") wird für bereits
+  // bepunktete Tips nicht mehr automatisch nachgezogen — admin/audit-points
+  // zeigt solche Abweichungen zumindest an (korrigiert sie aber nicht selbst).
   const finished = fullRows.filter(r => r.status === 'FINISHED' && r.home_score !== null && r.away_score !== null)
   let scored = 0
   const usernames = finished.length > 0 ? await getAllUsernames() : []
@@ -101,7 +106,7 @@ export async function GET(request: Request) {
     if (!result) continue
     const penInfo = match.home_penalty_score != null && match.away_penalty_score != null
       ? ` (n.E. ${match.home_penalty_score}:${match.away_penalty_score})` : ''
-    const tips = await getTipsForMatch(match.match_id)
+    const tips = await getUnscoredTipsForMatch(match.match_id)
     for (const tip of tips) {
       const pts = calculatePoints(tip.home_goals, tip.away_goals, result.home, result.away)
       console.log(`[wm/points] ${usernameMap.get(tip.user_id) ?? tip.user_id} | ${match.home_team} vs ${match.away_team} | Tipp: ${tip.home_goals}:${tip.away_goals} | Ergebnis: ${result.home}:${result.away}${penInfo} | Punkte: ${pts}`)
