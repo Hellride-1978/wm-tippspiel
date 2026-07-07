@@ -4,10 +4,8 @@ import { upsertMatches, upsertMatchesBase, getManualOverrideIds, getTipsForMatch
 import { getSession } from '@/lib/auth'
 import { calculatePoints, resultForScoring } from '@/lib/points'
 
-// worldcup26.ir antwortet teils sehr langsam (>10s) — Vercel-Timeout hochsetzen,
-// aber nicht zu weit, sonst hält ein hängender Request bei Minutentakt unnötig
-// lange Provisioned-Memory (GB-Std) — siehe DEPLOYMENT_DISABLED-Vorfall.
-export const maxDuration = 25
+// worldcup26.ir antwortet teils sehr langsam (>10s) — Vercel-Timeout hochsetzen
+export const maxDuration = 60
 
 export async function GET(request: Request) {
   const isVercelCron = request.headers.get('x-vercel-cron') !== null
@@ -21,12 +19,8 @@ export async function GET(request: Request) {
   // Minutentakt-Schoner: die langsame externe API nur rufen, wenn ein Spiel
   // läuft / gleich beginnt / kürzlich endete. So darf ein externer Scheduler
   // jede Minute pollen, ohne 24/7 Function-Kosten zu erzeugen.
-  // Umgehung via ?force=1 (nur manuell/Admin) oder Vercel-Tagescron (voller
-  // Sync für Spielplan/Bracket). Der externe Minuten-Cron darf den Guard NICHT
-  // per force=1 umgehen — sonst liefe die teure API 24/7 statt nur im Live-Fenster
-  // und sprengt das Vercel-Nutzungslimit (siehe DEPLOYMENT_DISABLED-Vorfall).
-  const forceParam = new URL(request.url).searchParams.get('force') === '1'
-  const force = isVercelCron || (forceParam && !isExternalCron)
+  // Umgehung via ?force=1 oder Vercel-Tagescron (voller Sync für Spielplan/Bracket).
+  const force = isVercelCron || new URL(request.url).searchParams.get('force') === '1'
   if (!force && !(await hasActiveMatchWindow())) {
     return NextResponse.json({ ok: true, skipped: 'no active match window' })
   }
