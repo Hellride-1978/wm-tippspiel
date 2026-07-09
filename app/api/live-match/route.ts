@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { getLiveOrNextMatch, getTipsForMatch, getAllUsernames } from '@/lib/db'
+import { getLiveOrNextMatch, getTipsForMatch, getAllUsernames, getTipByUserAndMatch } from '@/lib/db'
 import { calculatePoints } from '@/lib/points'
 
 export async function GET() {
@@ -8,7 +8,9 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: 'Nicht autorisiert.' }, { status: 401 })
 
   const match = await getLiveOrNextMatch()
-  if (!match) return NextResponse.json({ match: null, tips: [] })
+  if (!match) return NextResponse.json({ match: null, tips: [], myTip: null })
+
+  const myTip = await getTipByUserAndMatch(session.userId, match.match_id)
 
   const kickedOff = new Date(match.utc_date) <= new Date()
   const isPostKickoff = ['IN_PLAY', 'PAUSED', 'FINISHED'].includes(match.status) || kickedOff
@@ -49,5 +51,6 @@ export async function GET() {
       utc_date: match.utc_date,
     },
     tips,
+    myTip: myTip ? { home_goals: myTip.home_goals, away_goals: myTip.away_goals } : null,
   })
 }

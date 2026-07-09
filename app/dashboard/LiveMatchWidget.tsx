@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { formatDate } from '../utils'
 
 interface MatchData {
@@ -30,6 +31,7 @@ interface TipRow {
 interface LiveData {
   match: MatchData | null
   tips: TipRow[]
+  myTip: { home_goals: number; away_goals: number } | null
 }
 
 function getHalfInfo(match: MatchData): { half: string; minute: string } {
@@ -123,7 +125,7 @@ export function LiveMatchWidget({ currentUsername }: { currentUsername: string }
   if (initialLoad) return <div className="live-skeleton" aria-hidden="true" />
   if (!data?.match) return null
 
-  const { match, tips } = data
+  const { match, tips, myTip } = data
   const kickedOff = new Date(match.utc_date) <= new Date()
   const isPostKickoff = kickedOff
   const isScheduled = !isPostKickoff
@@ -160,6 +162,12 @@ export function LiveMatchWidget({ currentUsername }: { currentUsername: string }
           <span className="live-flag">{match.away_team_flag}</span>
         </div>
       </div>
+
+      {isScheduled && (
+        <Link href={`/tip/${match.match_id}`}>
+          <div className="match-cta">{myTip ? 'Tipp ändern →' : 'Tipp abgeben →'}</div>
+        </Link>
+      )}
 
       {isPostKickoff && (
         <div className="live-tips">

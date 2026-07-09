@@ -90,7 +90,7 @@ export default async function DashboardPage() {
                       <span className="match-vs">{tippedIds.has(m.match_id) && tip ? <span className="score">{tip.home_goals}:{tip.away_goals}</span> : 'vs'}</span>
                       <span className="match-team match-team-away">{m.away_team} {m.away_team_flag}</span>
                     </div>
-                    {!tippedIds.has(m.match_id) && <div className="match-cta">Tipp abgeben →</div>}
+                    <div className="match-cta">{tippedIds.has(m.match_id) ? 'Tipp ändern →' : 'Tipp abgeben →'}</div>
                   </Link>
                 )
               })}
