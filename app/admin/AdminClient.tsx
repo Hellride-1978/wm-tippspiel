@@ -1,16 +1,57 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { WmMatch } from '@/lib/db'
-import { formatDate } from '../utils'
+import { formatDate, stageLabel } from '../utils'
+
+const STAGE_OPTIONS = ['GROUP_STAGE', 'ROUND_OF_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'THIRD_PLACE', 'FINAL']
 
 export function AdminClient({ matches }: { matches: WmMatch[] }) {
+  const router = useRouter()
   const [selected, setSelected] = useState<WmMatch | null>(null)
   const [home, setHome] = useState('')
   const [away, setAway] = useState('')
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<string | null>(null)
   const [clearing, setClearing] = useState(false)
+
+  const [newHome, setNewHome] = useState('')
+  const [newAway, setNewAway] = useState('')
+  const [newDate, setNewDate] = useState('')
+  const [newStage, setNewStage] = useState('FINAL')
+  const [creating, setCreating] = useState(false)
+  const [createResult, setCreateResult] = useState<string | null>(null)
+
+  async function handleCreateMatch(e: React.FormEvent) {
+    e.preventDefault()
+    setCreating(true)
+    setCreateResult(null)
+    try {
+      const res = await fetch('/api/admin/create-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          homeTeam: newHome,
+          awayTeam: newAway,
+          utcDate: new Date(newDate).toISOString(),
+          stage: newStage,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setCreateResult(`✓ "${newHome} vs ${newAway}" angelegt.`)
+        setNewHome('')
+        setNewAway('')
+        setNewDate('')
+        router.refresh()
+      } else {
+        setCreateResult(`Fehler: ${data.error}`)
+      }
+    } finally {
+      setCreating(false)
+    }
+  }
 
   const pastMatches = matches
     .filter(m => new Date(m.utc_date) <= new Date())
@@ -73,6 +114,45 @@ export function AdminClient({ matches }: { matches: WmMatch[] }) {
         <button className="btn btn-outline" onClick={handleClearFutureScores} disabled={clearing}>
           {clearing ? 'Wird bereinigt…' : 'Scores zurücksetzen'}
         </button>
+      </div>
+
+      <div className="card-sm" style={{ marginBottom: 24 }}>
+        <h2 className="section-title" style={{ marginBottom: 4 }}>Spiel manuell anlegen</h2>
+        <p style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 16 }}>
+          Notnagel, falls die externe API ein Spiel (z. B. Finale oder Spiel um Platz 3) nicht oder nicht mehr liefert.
+        </p>
+        <form onSubmit={handleCreateMatch} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--ink-3)', marginBottom: 4 }}>Heimteam</label>
+              <input type="text" value={newHome} onChange={e => setNewHome(e.target.value)} required className="input" style={{ width: '100%' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--ink-3)', marginBottom: 4 }}>Auswärtsteam</label>
+              <input type="text" value={newAway} onChange={e => setNewAway(e.target.value)} required className="input" style={{ width: '100%' }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--ink-3)', marginBottom: 4 }}>Anstoß (lokale Zeit)</label>
+              <input type="datetime-local" value={newDate} onChange={e => setNewDate(e.target.value)} required className="input" style={{ width: '100%' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--ink-3)', marginBottom: 4 }}>Phase</label>
+              <select value={newStage} onChange={e => setNewStage(e.target.value)} className="input" style={{ width: '100%' }}>
+                {STAGE_OPTIONS.map(s => <option key={s} value={s}>{stageLabel(s)}</option>)}
+              </select>
+            </div>
+          </div>
+          <button type="submit" className="btn btn-primary" disabled={creating}>
+            {creating ? 'Wird angelegt…' : 'Spiel anlegen'}
+          </button>
+        </form>
+        {createResult && (
+          <p style={{ marginTop: 12, fontSize: 14, color: createResult.startsWith('✓') ? 'var(--green)' : 'var(--red)' }}>
+            {createResult}
+          </p>
+        )}
       </div>
 
       {selected && (

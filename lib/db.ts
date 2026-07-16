@@ -109,6 +109,53 @@ export async function getMatchById(matchId: number): Promise<WmMatch | null> {
   return data ?? null
 }
 
+// Notnagel, falls die externe API ein Spiel (z.B. Finale/Spiel um Platz 3) nie
+// liefert: Admin legt es von Hand an. match_id ist negativ und damit garantiert
+// verschieden von echten API-IDs (parseInt(g.id) ist immer positiv) — der reguläre
+// Sync kann so ein manuell angelegtes Spiel nie überschreiben oder duplizieren.
+export async function createManualMatch(params: {
+  home_team: string
+  away_team: string
+  home_team_flag: string | null
+  away_team_flag: string | null
+  utc_date: string
+  stage: string
+}): Promise<WmMatch> {
+  const client = getClient()
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const match_id = -Math.floor(Date.now() / 1000) - attempt
+    const { data, error } = await client
+      .from('wm_matches_cache')
+      .insert({
+        match_id,
+        home_team: params.home_team,
+        away_team: params.away_team,
+        home_team_flag: params.home_team_flag,
+        away_team_flag: params.away_team_flag,
+        utc_date: params.utc_date,
+        stage: params.stage,
+        status: 'SCHEDULED',
+        home_score: null,
+        away_score: null,
+        home_penalty_score: null,
+        away_penalty_score: null,
+        minute: null,
+        matchday: null,
+        group_name: null,
+        manual_home_score: null,
+        manual_away_score: null,
+        use_manual_score: false,
+        last_updated: new Date().toISOString(),
+      })
+      .select()
+      .single()
+    if (!error) return data as WmMatch
+    // match_id-Kollision (sehr unwahrscheinlich) — nächsten Versuch mit anderer ID.
+    if (error.code !== '23505') throw error
+  }
+  throw new Error('Konnte keine freie match_id finden.')
+}
+
 export async function upsertMatches(matches: Partial<WmMatch>[]) {
   const { error } = await getClient().from('wm_matches_cache').upsert(matches, { onConflict: 'match_id' })
   if (!error) return
