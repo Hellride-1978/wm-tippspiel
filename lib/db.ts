@@ -91,6 +91,9 @@ export async function getUpcomingMatches(limit = 10): Promise<WmMatch[]> {
     .select('*')
     .in('status', ['SCHEDULED', 'TIMED'])
     .gt('utc_date', new Date().toISOString())
+    // Teilnehmer noch nicht bekannt (Finale/Spiel um Platz 3 vor Ende der Halbfinals) —
+    // taucht im Spielplan auf, soll aber hier nicht zum Tippen vorgeschlagen werden.
+    .neq('home_team', 'TBD')
     .order('utc_date', { ascending: true })
     .limit(limit)
   return data ?? []
@@ -258,12 +261,13 @@ export async function getLiveOrNextMatch(): Promise<WmMatch | null> {
     .limit(1)
   if (recent && recent.length > 0) return recent[0] as WmMatch
 
-  // 3. Nächstes geplantes Spiel
+  // 3. Nächstes geplantes Spiel (TBD-Platzhalter für Finale/Spiel um Platz 3 ausgeschlossen)
   const { data: next } = await client
     .from('wm_matches_cache')
     .select('*')
     .in('status', ['SCHEDULED', 'TIMED'])
     .gt('utc_date', now)
+    .neq('home_team', 'TBD')
     .order('utc_date', { ascending: true })
     .limit(1)
   return next && next.length > 0 ? (next[0] as WmMatch) : null

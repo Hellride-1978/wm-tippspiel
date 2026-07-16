@@ -24,6 +24,7 @@ export default async function TipPage({ params }: { params: Promise<{ matchId: s
   if (!match) return notFound()
 
   const hasStarted = new Date(match.utc_date) <= new Date()
+  const isTbd = match.home_team === 'TBD' || match.away_team === 'TBD'
 
   return (
     <div className="page page-narrow">
@@ -53,7 +54,12 @@ export default async function TipPage({ params }: { params: Promise<{ matchId: s
           </div>
         )}
 
-        {hasStarted ? (
+        {isTbd ? (
+          <div className="tip-closed">
+            <span className="tip-closed-icon">⏳</span>
+            <span>Teilnehmer stehen noch nicht fest — Tippen ist erst möglich, sobald sie feststehen.</span>
+          </div>
+        ) : hasStarted ? (
           <div className="tip-closed">
             <span className="tip-closed-icon">🔒</span>
             <span>Tippen nicht mehr möglich — das Spiel hat bereits begonnen.</span>

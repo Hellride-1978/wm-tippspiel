@@ -35,9 +35,11 @@ export async function GET(request: Request) {
 
   const manualIds = await getManualOverrideIds()
 
-  // Skip knockout games where participants aren't determined yet (null team names)
+  // Skip knockout games where participants aren't determined yet (null team names) —
+  // außer Finale/Spiel um Platz 3: die sollen mit "TBD" schon als Termin auftauchen,
+  // sobald der Anstoßtermin feststeht, auch bevor die Halbfinal-Verlierer/-Sieger klar sind.
   const now = new Date().toISOString()
-  const rows = games.filter(g => g.home_team_name_en && g.away_team_name_en).map(g => {
+  const rows = games.filter(g => (g.home_team_name_en && g.away_team_name_en) || g.type === 'third' || g.type === 'final').map(g => {
     const { status: rawStatus, minute } = mapStatus(g)
     const utc_date = localDateToUtc(g.local_date, g.stadium_id ?? null)
     // API meldet manchmal IN_PLAY/PAUSED bevor das Spiel überhaupt angefangen hat
@@ -54,12 +56,14 @@ export async function GET(request: Request) {
     const penValid = rawHomePen !== null && rawAwayPen !== null && !isNaN(rawHomePen) && !isNaN(rawAwayPen) && rawHomePen >= 0 && rawAwayPen >= 0 && rawHomePen <= 30 && rawAwayPen <= 30
     const homePenaltyScore = penValid ? rawHomePen : null
     const awayPenaltyScore = penValid ? rawAwayPen : null
+    const homeTeam = g.home_team_name_en || 'TBD'
+    const awayTeam = g.away_team_name_en || 'TBD'
     return {
       match_id: parseInt(g.id),
-      home_team: g.home_team_name_en,
-      away_team: g.away_team_name_en,
-      home_team_flag: flagForName(g.home_team_name_en),
-      away_team_flag: flagForName(g.away_team_name_en),
+      home_team: homeTeam,
+      away_team: awayTeam,
+      home_team_flag: g.home_team_name_en ? flagForName(g.home_team_name_en) : null,
+      away_team_flag: g.away_team_name_en ? flagForName(g.away_team_name_en) : null,
       utc_date,
       status,
       minute,

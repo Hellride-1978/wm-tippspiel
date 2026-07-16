@@ -166,6 +166,7 @@ export default function MatchesClient({ matches, myTips }: { matches: WmMatch[];
                         const tip = tipMap.get(match.match_id)
                         const started = new Date(match.utc_date) <= now
                         const finished = match.status === 'FINISHED'
+                        const tbd = match.home_team === 'TBD' || match.away_team === 'TBD'
                         return (
                           <div key={match.match_id} className="match-row">
                             <div className="match-row-main">
@@ -186,7 +187,9 @@ export default function MatchesClient({ matches, myTips }: { matches: WmMatch[];
                               </div>
                             </div>
                             <div className="match-row-side">
-                              {tip ? (
+                              {tbd ? (
+                                <span className="no-tip-label">Teilnehmer stehen noch nicht fest</span>
+                              ) : tip ? (
                                 <div className="tip-inline">
                                   <span className="score">Tipp: {tip.home_goals}:{tip.away_goals}</span>
                                   {tip.points_awarded !== null && (

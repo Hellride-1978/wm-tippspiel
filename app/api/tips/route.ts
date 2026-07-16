@@ -19,6 +19,7 @@ export async function POST(request: Request) {
     const match = await getMatchById(matchId)
     if (!match) return NextResponse.json({ error: 'Spiel nicht gefunden.' }, { status: 404 })
     if (new Date(match.utc_date) <= new Date()) return NextResponse.json({ error: 'Tippen nicht mehr möglich — das Spiel hat bereits begonnen.' }, { status: 403 })
+    if (match.home_team === 'TBD' || match.away_team === 'TBD') return NextResponse.json({ error: 'Teilnehmer stehen noch nicht fest.' }, { status: 403 })
 
     const tip = await upsertTip({ user_id: session.userId, match_id: matchId, home_goals: homeGoals, away_goals: awayGoals })
     return NextResponse.json(tip)
