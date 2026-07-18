@@ -23,6 +23,33 @@ export function AdminClient({ matches }: { matches: WmMatch[] }) {
   const [creating, setCreating] = useState(false)
   const [createResult, setCreateResult] = useState<string | null>(null)
 
+  const [merging, setMerging] = useState(false)
+  const [mergeResult, setMergeResult] = useState<string | null>(null)
+
+  async function handleMergeDuplicates() {
+    setMerging(true)
+    setMergeResult(null)
+    try {
+      const res = await fetch('/api/admin/merge-duplicates', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        type MergeEntry = { stage: string; removedMatchId: number; keptMatchId: number; tipsMoved: number; tipsDropped: number }
+        const merged: MergeEntry[] = data.merged
+        setMergeResult(
+          merged.length === 0
+            ? 'Keine Duplikate gefunden.'
+            : `✓ ${merged.length} Duplikat(e) zusammengeführt: ` +
+              merged.map(m => `${stageLabel(m.stage)} (${m.tipsMoved} Tipp(s) übernommen${m.tipsDropped > 0 ? `, ${m.tipsDropped} verworfen (bereits auf beiden getippt)` : ''})`).join('; ')
+        )
+        router.refresh()
+      } else {
+        setMergeResult(`Fehler: ${data.error}`)
+      }
+    } finally {
+      setMerging(false)
+    }
+  }
+
   async function handleCreateMatch(e: React.FormEvent) {
     e.preventDefault()
     setCreating(true)
@@ -114,6 +141,26 @@ export function AdminClient({ matches }: { matches: WmMatch[] }) {
         <button className="btn btn-outline" onClick={handleClearFutureScores} disabled={clearing}>
           {clearing ? 'Wird bereinigt…' : 'Scores zurücksetzen'}
         </button>
+      </div>
+
+      <div className="card-sm" style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>Duplikate zusammenführen</div>
+            <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+              Falls ein manuell angelegtes Spiel und ein später von der API geliefertes Spiel zur selben Phase (z. B. Finale) nebeneinander existieren:
+              API-Spiel bleibt, Tipps vom manuellen Spiel werden übernommen, manuelles Spiel wird gelöscht.
+            </div>
+          </div>
+          <button className="btn btn-outline" onClick={handleMergeDuplicates} disabled={merging}>
+            {merging ? 'Wird zusammengeführt…' : 'Duplikate bereinigen'}
+          </button>
+        </div>
+        {mergeResult && (
+          <p style={{ marginTop: 12, fontSize: 14, color: mergeResult.startsWith('✓') || mergeResult.startsWith('Keine') ? 'var(--green)' : 'var(--red)' }}>
+            {mergeResult}
+          </p>
+        )}
       </div>
 
       <div className="card-sm" style={{ marginBottom: 24 }}>

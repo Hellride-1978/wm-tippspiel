@@ -156,6 +156,50 @@ export async function createManualMatch(params: {
   throw new Error('Konnte keine freie match_id finden.')
 }
 
+// Falls die API ein Spiel doch noch liefert, nachdem der Admin es schon manuell
+// angelegt hat, existiert die Stage (z.B. FINAL) doppelt: einmal mit negativer
+// match_id (manuell), einmal mit positiver (API). Führt beide zusammen — das
+// API-Spiel bleibt (aktuellere/verlässlichere Daten), Tipps vom manuellen Spiel
+// wandern rüber, das manuelle Spiel wird gelöscht.
+export async function mergeDuplicateStageMatches(): Promise<
+  { stage: string; removedMatchId: number; keptMatchId: number; tipsMoved: number; tipsDropped: number }[]
+> {
+  const client = getClient()
+  const { data } = await client.from('wm_matches_cache').select('*')
+  const all = (data ?? []) as WmMatch[]
+
+  const manualMatches = all.filter(m => m.match_id < 0 && m.stage != null)
+  const results: { stage: string; removedMatchId: number; keptMatchId: number; tipsMoved: number; tipsDropped: number }[] = []
+
+  for (const manual of manualMatches) {
+    const real = all.find(m => m.match_id > 0 && m.stage === manual.stage)
+    if (!real) continue
+
+    const { data: manualTips } = await client.from('wm_tips').select('*').eq('match_id', manual.match_id)
+    let tipsMoved = 0
+    let tipsDropped = 0
+    for (const tip of manualTips ?? []) {
+      const { data: existing } = await client
+        .from('wm_tips').select('id').eq('match_id', real.match_id).eq('user_id', tip.user_id).limit(1)
+      if (existing && existing.length > 0) {
+        // Nutzer hat auf beiden Duplikaten getippt — den auf dem echten Spiel behalten.
+        await client.from('wm_tips').delete().eq('id', tip.id)
+        tipsDropped++
+      } else {
+        const { error: moveError } = await client.from('wm_tips').update({ match_id: real.match_id }).eq('id', tip.id)
+        if (moveError) throw moveError
+        tipsMoved++
+      }
+    }
+
+    const { error: deleteError } = await client.from('wm_matches_cache').delete().eq('match_id', manual.match_id)
+    if (deleteError) throw deleteError
+
+    results.push({ stage: manual.stage!, removedMatchId: manual.match_id, keptMatchId: real.match_id, tipsMoved, tipsDropped })
+  }
+  return results
+}
+
 export async function upsertMatches(matches: Partial<WmMatch>[]) {
   const { error } = await getClient().from('wm_matches_cache').upsert(matches, { onConflict: 'match_id' })
   if (!error) return
