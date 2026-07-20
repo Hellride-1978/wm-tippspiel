@@ -105,7 +105,9 @@ export function LiveMatchWidget({ currentUsername }: { currentUsername: string }
   // Nutzer das Dashboard rund um die Uhr offen lassen.
   useEffect(() => {
     if (initialLoad) return
-    const status = data?.match?.status
+    // Kein Spiel (mehr) vorhanden — z.B. nach Turnierende — nichts zu pollen.
+    if (!data?.match) return
+    const status = data.match.status
     if (status === 'FINISHED') return
     const isLive = status === 'IN_PLAY' || status === 'PAUSED'
     const delay = isLive ? 60_000 : 300_000

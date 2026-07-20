@@ -3,11 +3,5 @@
     "app/api/**/*": {
       "memory": 512
     }
-  },
-  "crons": [
-    {
-      "path": "/api/sync-matches",
-      "schedule": "0 6 * * *"
-    }
-  ]
+  }
 }
